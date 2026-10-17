@@ -7,6 +7,19 @@ bootstrap image whose first boot runs
 the image the user picked. See [docs/DESIGN.md](docs/DESIGN.md) for
 the architecture and [README.md](README.md) for current status.
 
+<!-- hive-contribute-plea: donated-compute appeal, keep in sync across repos -->
+## Contribute compute — no code needed
+
+**[Donate time with your AI CLI](https://hub.tunaos.org/#contribute).**
+
+Your machine runs one task at a time using your signed-in AI coding CLI.
+The relay alternates between eligible **School** (OS) and **Reef** (apps)
+hives after each task. If one hive has no work, the other can continue.
+
+The guide covers prerequisites, verified `just` setup, credentials, provider
+costs, and how to stop with Ctrl+C. Your subscription quota or API charges apply.
+Never post account credentials or API keys in issues or pull requests.
+
 ## Building and testing
 
 ### macOS app (`macos-app/Bootsahi`, Swift/SwiftUI)
