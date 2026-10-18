@@ -61,7 +61,7 @@ Never post account credentials or API keys in issues or pull requests.
 - [x] D1 first-boot fisherman agent config (`install-config.json` → unattended `bootc install`)
 - [x] D2 asahi-installer `--json` machine mode (upstreamable)
 - [x] D3 macOS app (SwiftUI; implemented and CI build/test-verified; real Apple Silicon end-to-end verification and signed/notarized distribution remain Alpha gates)
-- [x] D4 recoveryOS walkthrough UX, LUKS, Wi-Fi handoff (RecoveryWalkthroughView QR & instructions; LUKS fail-closed #20/#47; Wi-Fi prompt at first boot #46)
+- [ ] D4 recoveryOS walkthrough UX, LUKS, Wi-Fi handoff (partial: LUKS fail-closed behavior is implemented; recoveryOS illustrations/QR, Wi-Fi SSID prefill, real disk-slider bytes, hardware verification, and signed/notarized release artifact remain; see [app status](macos-app/Bootsahi/README.md) and [design](docs/DESIGN.md))
 
 ## Development & testing
 
