@@ -60,7 +60,7 @@ Never post account credentials or API keys in issues or pull requests.
 - [x] D0 validated against a real asahi image (`bonito:gnome-asahi`, tunaOS#774)
 - [x] D1 first-boot fisherman agent config (`install-config.json` → unattended `bootc install`)
 - [x] D2 asahi-installer `--json` machine mode (upstreamable)
-- [ ] D3 macOS app (SwiftUI, wraps the asahi-installer Python backend)
+- [x] D3 macOS app (SwiftUI; implemented and CI build/test-verified; real Apple Silicon end-to-end verification and signed/notarized distribution remain Alpha gates)
 - [x] D4 recoveryOS walkthrough UX, LUKS, Wi-Fi handoff (RecoveryWalkthroughView QR & instructions; LUKS fail-closed #20/#47; Wi-Fi prompt at first boot #46)
 
 ## Development & testing
