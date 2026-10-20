@@ -110,9 +110,7 @@ Why this wins:
    `customMounts` and runs `bootc install to-filesystem` — `to-disk` remains
    debug/QEMU-only (D0's own payload harness).
 3. **D2** — *(implemented, unverified on real hardware)* `--json` machine
-   mode for asahi-installer: [tuna-os/bootc-installer-asahi@json-machine-mode](
-   https://github.com/tuna-os/bootc-installer-asahi/tree/json-machine-mode)
-   ([protocol doc](https://github.com/tuna-os/bootc-installer-asahi/blob/json-machine-mode/docs/json-mode.md)).
+   mode for asahi-installer. See the [D2 machine-mode contract](D2-JSON-MACHINE-MODE.md).
    Structured stdio events/answers routed through the two chokepoints every
    TTY prompt already funnels through, so the ~80 existing call sites needed
    no changes and the default TTY path is provably byte-for-byte unchanged.
