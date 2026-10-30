@@ -26,7 +26,7 @@ jobs:
   lint:
     runs-on: ubuntu-26.04
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: shellcheck
         run: |
           sudo apt-get update && sudo apt-get install -y shellcheck
@@ -46,7 +46,7 @@ jobs:
   selftest:
     runs-on: ubuntu-26.04
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       # jq is needed by BOTH steps below: selftest.sh's installer_data layout
       # cases build their fixtures with it, and test-agent.sh drives the agent,
       # which uses jq throughout. Installed up front rather than inside the
@@ -79,7 +79,7 @@ jobs:
       # other assertion about that recipe is our opinion of what fisherman
       # accepts — which is precisely how the `vfat` defect survived: it looked
       # right to us and was never shown to the real consumer.
-      - uses: actions/setup-go@v7
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version: "1.27"
       - name: Build the pinned fisherman
@@ -111,7 +111,7 @@ jobs:
     runs-on: ubuntu-26.04-arm
     timeout-minutes: 60
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Install dependencies
         run: sudo apt-get update && sudo apt-get install -y jq gdisk podman dosfstools
       # bootc install writes a full image to a loop file; the stock runner does
@@ -121,7 +121,7 @@ jobs:
           sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc \
                       /usr/local/share/boost "$AGENT_TOOLSDIRECTORY" || true
           df -h /
-      - uses: actions/setup-go@v7
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version: "1.27"
       - name: Build the pinned fisherman
