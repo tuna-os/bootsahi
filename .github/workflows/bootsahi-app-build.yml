@@ -55,7 +55,7 @@ jobs:
       run:
         working-directory: macos-app/Bootsahi
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: select pre-6.2 Xcode
         run: |
           xcode=$(printf '%s\n' /Applications/Xcode_16*.app | sort -V | tail -n1)
@@ -119,7 +119,7 @@ jobs:
       run:
         working-directory: macos-app/Bootsahi
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: select pre-6.2 Xcode
         run: |
           xcode=$(printf '%s\n' /Applications/Xcode_16*.app | sort -V | tail -n1)
@@ -147,7 +147,7 @@ jobs:
       # wrong — which is exactly when someone needs to look at the picture. The
       # first version skipped the upload on failure, so a capture bug could only
       # be diagnosed from ratios with no way to see what they described.
-      - uses: actions/upload-artifact@v7
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
         with:
           name: gui-screenshots
@@ -172,7 +172,7 @@ jobs:
       run:
         working-directory: macos-app/Bootsahi
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: swift --version
         run: swift --version
       # Proves the compiler gate is actually open here — otherwise a silently
