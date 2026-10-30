@@ -155,6 +155,9 @@ fi
 [ -r "$OSROOT/usr/libexec/bootsahi-agent-recipe.sh" ] &&
 	ok "recipe adapter installed" ||
 	bad "recipe adapter MISSING — bootsahi-agent cannot start"
+[ -r "$OSROOT/usr/libexec/bootsahi-agent-policy.sh" ] &&
+	ok "policy library installed" ||
+	bad "policy library MISSING — bootsahi-agent cannot start"
 [ -r "$OSROOT/usr/libexec/bootsahi-agent-device.sh" ] &&
 	ok "device adapter installed" ||
 	bad "device adapter MISSING — bootsahi-agent cannot start"

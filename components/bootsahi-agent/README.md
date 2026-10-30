@@ -60,6 +60,7 @@ disk-auto-partition path.
 ## Ship it in every bootsahi bootstrap image
 
 - main orchestrator → `/usr/libexec/bootsahi-agent`
+- policy library → `/usr/libexec/bootsahi-agent-policy.sh`
 - recipe adapter library → `/usr/libexec/bootsahi-agent-recipe.sh`
 - device resolution library → `/usr/libexec/bootsahi-agent-device.sh`
 - unit → `/usr/lib/systemd/system/bootsahi-agent.service` (+ preset enable,
