@@ -30,7 +30,7 @@ jobs:
       - name: shellcheck
         run: |
           sudo apt-get update && sudo apt-get install -y shellcheck
-          shellcheck -S warning scripts/*.sh components/*/*.sh
+          shellcheck -S warning scripts/*.sh components/*/*.sh legacy/bootsahi-legacy
       # catalog.json's `verified` field is the only gate stopping the app
       # from offering an unbootable image (#70): a promoted tag must pass
       # the Asahi golden-manifest harness before it's marked verified:true.
