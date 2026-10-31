@@ -60,8 +60,8 @@ Never post account credentials or API keys in issues or pull requests.
 - [x] D0 validated against a real asahi image (`bonito:gnome-asahi`, tunaOS#774)
 - [x] D1 first-boot fisherman agent config (`install-config.json` → unattended `bootc install`)
 - [x] D2 asahi-installer `--json` machine mode (upstreamable)
-- [x] D3 macOS app (SwiftUI; implemented and CI build/test-verified; real Apple Silicon end-to-end verification and signed/notarized distribution remain Alpha gates)
-- [ ] D4 recoveryOS walkthrough UX, LUKS, Wi-Fi handoff (partial: LUKS fail-closed behavior is implemented; recoveryOS illustrations/QR, Wi-Fi SSID prefill, real disk-slider bytes, hardware verification, and signed/notarized release artifact remain; see [app status](macos-app/Bootsahi/README.md) and [design](docs/DESIGN.md))
+- [x] D3 macOS app (SwiftUI; implementation is complete, and CI build and tests pass). Alpha still needs end-to-end tests on real Apple Silicon and signed and notarized distribution.
+- [ ] D4 recoveryOS: LUKS fails closed. Remaining work: illustrations, QR, Wi-Fi SSID prefill, real disk-slider bytes, hardware verification, and a signed and notarized release artifact.
 
 ## Development & testing
 
