@@ -45,21 +45,19 @@ Two claims stay separate (see
 packaging — versus **"the product installs"**, which needs the bootstrap
 containing `bootsahi-agent`. A stock desktop image boots and cannot install.
 
-## The fisherman pin is duplicated three times, and is stale
+## The fisherman pin is duplicated three times
 
 The same SHA appears in `scripts/build-bootstrap-image.sh` (`FISHERMAN_REV`)
 and twice in `selftest.yml`, each marked "Keep in sync" — with nothing
 enforcing it. Change one and the disk selftest can validate against a
 different fisherman than the bootstrap ships.
 
-All three currently pin `d6b21dd`, the **head commit of
-[fisherman#70](https://github.com/tuna-os/fisherman/pull/70)**, with a
-TEMPORARY comment saying to move to the merged SHA on `dev` once it lands.
-It landed on 2026-07-30, squash-merged — so `d6b21dd` is *not* an ancestor of
-`dev`; it survives only because the PR branch
-`fix/custom-layout-ext4-verity` still exists. Deleting that branch breaks a
-fresh `git clone` + `git checkout <sha>` in both workflows and in the
-bootstrap build.
+All three pin `205e07d`, the squash merge of
+[fisherman#70](https://github.com/tuna-os/fisherman/pull/70) on `dev`.
+Pin only a commit on `dev`. Do not pin a PR branch head: a squash merge
+leaves that head off `dev`. When someone deletes the branch, a fresh
+`git clone` + `git checkout <sha>` fails in both workflows and in the
+bootstrap build (#106).
 
 Re-pinning is a maintainer decision, not a mechanical bump: it changes what
 gets written to a user's disk on hardware CI cannot fully exercise.
