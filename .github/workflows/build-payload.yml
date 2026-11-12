@@ -41,12 +41,14 @@ jobs:
     runs-on: ubuntu-26.04-arm
     timeout-minutes: 90
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
 
       - name: Login to GHCR
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: echo "$GH_TOKEN" | sudo podman login ghcr.io --username "${{ github.actor }}" --password-stdin
+        run: echo "$GH_TOKEN" | sudo podman login ghcr.io --username "${GITHUB_ACTOR}" --password-stdin
 
       - name: Pull image
         # Dispatch inputs travel via env, never interpolated into the script
@@ -90,7 +92,7 @@ jobs:
 
       - name: Upload boot serial log
         if: always()
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        uses: actions/upload-artifact@v7.0.2
         with:
           name: payload-boot-serial-${{ github.run_id }}
           path: serial-payload-boot.log
@@ -98,7 +100,7 @@ jobs:
           if-no-files-found: ignore
 
       - name: Upload payload artifact
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        uses: actions/upload-artifact@v7.0.2
         with:
           name: ${{ inputs.name }}-payload
           path: out/
