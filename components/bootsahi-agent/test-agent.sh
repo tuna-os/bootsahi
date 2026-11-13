@@ -139,6 +139,7 @@ run_agent() { # config_path fisherman_bin [extra_env...]
 	env BOOTSAHI_RUN_DIR="$rundir" BOOTSAHI_NO_REBOOT=1 BOOTSAHI_CONFIG_PATH="$usedcfg" \
 		BOOTSAHI_SKIP_HW_CHECK=1 \
 		BOOTSAHI_ALLOW_CONFIG_DEVICES=1 \
+		BOOTSAHI_TRUSTED_SIGNERS_PATH="$WORK/trusted-signers.json" \
 		PATH="$STUBS/bin-ok:$PATH" \
 		BOOTSAHI_FISHERMAN_BIN="$fbin" "${@:3}" bash "$AGENT" >"$rundir/stdout" 2>&1
 	echo $? >"$rundir/exit"
@@ -159,6 +160,22 @@ cat >"$WORK/good.json" <<'EOF'
   "cosignIssuer": "https://example.test/oidc"
 }
 EOF
+
+# The signers this suite's bootstrap "ships". The fixtures' example.test signer
+# is listed here rather than in the real trusted-signers.json, so the shipped
+# list never has to carry a test identity.
+cat >"$WORK/trusted-signers.json" <<'EOF'
+{"signers": [{"cosignIdentity": "https://example.test/signer", "cosignIssuer": "https://example.test/oidc"}]}
+EOF
+
+# A signer the bootstrap does not ship: someone's own workflow, validly signed.
+jq '.targetImgref = "ghcr.io/someone-else/image:latest"
+    | .cosignIdentity = "https://github.com/someone-else/image/.github/workflows/build.yml@refs/heads/main"
+    | .cosignIssuer = "https://token.actions.githubusercontent.com"' \
+	"$WORK/good.json" >"$WORK/untrusted-signer.json"
+
+# A trusted identity paired with a different issuer. Trust is in the pair.
+jq '.cosignIssuer = "https://issuer.example.test/other"' "$WORK/good.json" >"$WORK/untrusted-issuer.json"
 
 # Same config with NO signature policy. Since #24 this must be REFUSED rather
 # than installed, so it is a fixture for the refusal test, not the happy path.
@@ -369,6 +386,30 @@ check "no recipe generated without a policy" "" \
 echo "==> identity WITHOUT issuer -> refuse (half a policy is no policy)"
 r=$(run_agent "$WORK/half-policy.json" "$STUBS/fisherman-ok")
 check_exit "exit code (identity without issuer -> refuse)" 1 "$r"
+
+# The config sits on the ESP beside the image reference, so a signer it names
+# proves nothing by itself: anyone can sign their own image with their own
+# workflow. The cosign stub SUCCEEDS in these three cases, so only the
+# trusted-signers check can produce the refusal.
+echo "==> signer not shipped in trusted-signers.json -> refuse, even though cosign would verify"
+r=$(run_agent "$WORK/untrusted-signer.json" "$STUBS/fisherman-ok")
+check_exit "exit code (untrusted signer -> refuse)" 1 "$r"
+check "no recipe generated for an untrusted signer" "" \
+	"$(ls "$r/recipe.json" 2>/dev/null || true)"
+if grep -q "verifying cosign signature" "$r/install.log"; then
+	echo "FAIL: cosign was consulted for a signer the bootstrap does not trust"
+	fail=1
+else
+	echo "ok: untrusted signer refused before cosign ran"
+fi
+
+echo "==> trusted identity with a different issuer -> refuse (the pair is what is trusted)"
+r=$(run_agent "$WORK/untrusted-issuer.json" "$STUBS/fisherman-ok")
+check_exit "exit code (trusted identity, other issuer -> refuse)" 1 "$r"
+
+echo "==> trusted-signers.json missing -> refuse (fail closed, like the schema)"
+r=$(run_agent "$WORK/good.json" "$STUBS/fisherman-ok" BOOTSAHI_TRUSTED_SIGNERS_PATH="$WORK/no-such-signers.json")
+check_exit "exit code (no trusted-signers list -> refuse)" 1 "$r"
 
 echo "==> cosign verification FAILS (wrong signer / wrong issuer)"
 r=$(run_agent "$WORK/good.json" "$STUBS/fisherman-ok" PATH="$STUBS/bin-fail:$PATH")

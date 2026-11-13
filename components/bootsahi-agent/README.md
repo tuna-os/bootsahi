@@ -44,10 +44,13 @@ disk-auto-partition path.
 - Schema: [`install-config.schema.json`](install-config.schema.json).
 - Optional Wi-Fi connect (`nmcli`) if `wifi.ssid` is present; non-fatal on
   failure (ethernet may still work).
-- Optional cosign signature verification when `cosignIdentity` is set —
-  refuses to deploy an unverified image if `cosign` isn't installed in the
-  bootstrap. `BOOTSAHI_SKIP_VERIFY=1` is a dev/test-only escape hatch, never
-  for production bootstrap images.
+- Cosign signature verification, always. `cosignIdentity` and `cosignIssuer`
+  are required, and the pair must be listed in
+  [`trusted-signers.json`](trusted-signers.json), which ships in the bootstrap:
+  the config sits on the ESP beside the image reference, so it can select a
+  trusted signer but not introduce one. The agent deploys the digest cosign
+  verified. `BOOTSAHI_ALLOW_UNVERIFIED=1` is a dev/test-only escape hatch that
+  taints the run, never for production bootstrap images.
 - Builds a fisherman recipe with `customMounts` (ESP + root, both
   pre-partitioned), `bootloader: "systemd"` (per fisherman's own docs, this
   is the setting for Bluefin/Dakota-style systemd-boot images — which is
@@ -73,12 +76,13 @@ disk-auto-partition path.
 - device resolution library → `/usr/libexec/bootsahi-agent-device.sh`
 - unit → `/usr/lib/systemd/system/bootsahi-agent.service` (+ preset enable,
   `WantedBy=multi-user.target`)
+- schema → `/usr/share/bootsahi/install-config.schema.json`
+- trusted signers → `/usr/share/bootsahi/trusted-signers.json`
 
-Requires `jq` and (for install) the `fisherman` binary reachable on `$PATH`.
-`nmcli` and `cosign` are optional — their absence only disables the
-corresponding feature (Wi-Fi connect, signature verification) rather than
-failing the whole agent, except that a `cosignIdentity` in the config with no
-`cosign` binary is treated as a hard failure (refuse to deploy unverified).
+Requires `jq`, `cosign` and (for install) the `fisherman` binary reachable on
+`$PATH`. `nmcli` is optional — its absence only disables Wi-Fi connect. A
+missing `cosign`, schema or trusted-signers list is a hard failure (refuse to
+deploy unverified).
 
 ## Testing
 

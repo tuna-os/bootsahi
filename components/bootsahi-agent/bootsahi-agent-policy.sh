@@ -156,6 +156,49 @@ connect_wifi() {
     unset psk
 }
 
+# find_trusted_signers locates trusted-signers.json, the list of signers this
+# bootstrap accepts. Same lookup order as the schema: production installs it to
+# /usr/share/bootsahi/; dev/test checks BOOTSAHI_TRUSTED_SIGNERS_PATH or
+# AGENT_LIB_DIR.
+find_trusted_signers() {
+    if [ -n "${BOOTSAHI_TRUSTED_SIGNERS_PATH:-}" ]; then
+        [ -f "$BOOTSAHI_TRUSTED_SIGNERS_PATH" ] && echo "$BOOTSAHI_TRUSTED_SIGNERS_PATH"
+        return 0
+    fi
+    if [ -f "/usr/share/bootsahi/trusted-signers.json" ]; then
+        echo "/usr/share/bootsahi/trusted-signers.json"
+        return 0
+    fi
+    if [ -f "$AGENT_LIB_DIR/trusted-signers.json" ]; then
+        echo "$AGENT_LIB_DIR/trusted-signers.json"
+        return 0
+    fi
+    return 0
+}
+
+# signer_is_trusted reports whether an (identity, issuer) pair is one this
+# bootstrap ships as trusted. Exact string match on both, as a pair.
+#
+# The config names the signer it expects, but the config lives on the ESP next
+# to the image reference it is meant to constrain. Whoever can write one can
+# write the other, and a keyless signature from one's own workflow costs
+# nothing. So the config's pair only selects among signers the bootstrap
+# already trusts; it never introduces one.
+#
+# Fails closed: a missing or unparsable list is a refusal, not a pass. The list
+# ships in the bootstrap image, so its absence is a packaging defect.
+signer_is_trusted() {
+    local identity="$1" issuer="$2" signers_file
+    signers_file=$(find_trusted_signers)
+    if [ -z "$signers_file" ]; then
+        log "trusted-signers.json not found; cannot tell whether the config's signer is one this bootstrap accepts"
+        return 1
+    fi
+    jq -e --arg id "$identity" --arg iss "$issuer" '
+        any(.signers[]?; .cosignIdentity == $id and .cosignIssuer == $iss)
+    ' "$signers_file" >/dev/null 2>>"$LOG_FILE"
+}
+
 # verify_signature FAILS CLOSED and prints the digest-pinned reference that the
 # install must actually deploy. Callers use that output, never the tag.
 #
@@ -170,7 +213,10 @@ connect_wifi() {
 #
 #  1. Fail closed. Missing identity OR issuer is a refusal, not a skip. Both
 #     are required: an identity without an issuer would accept a certificate
-#     for the same identity string from ANY OIDC provider.
+#     for the same identity string from ANY OIDC provider. The pair must also
+#     be one the bootstrap ships in trusted-signers.json (see
+#     signer_is_trusted): a policy the config can rewrite is no more a policy
+#     than one it can omit.
 #  2. Verify and deploy the SAME BYTES. Verifying a tag and then handing that
 #     tag to the installer is a TOCTOU race — the tag can move between the two,
 #     so what was verified is not necessarily what lands. cosign reports the
@@ -199,6 +245,13 @@ verify_signature() {
         log "no signature policy in install-config.json (cosignIdentity and cosignIssuer are both required)"
         log "refusing to deploy an unverified image — see issue #24"
         log "(dev/test override: BOOTSAHI_ALLOW_UNVERIFIED=1, which taints the run)"
+        return 1
+    fi
+    if ! signer_is_trusted "$identity" "$issuer"; then
+        log "install-config.json names a signer this bootstrap does not trust:"
+        log "  cosignIdentity=$identity"
+        log "  cosignIssuer=$issuer"
+        log "refusing: a signature only proves authenticity against a signer the bootstrap ships"
         return 1
     fi
     if ! command -v cosign >/dev/null 2>&1; then

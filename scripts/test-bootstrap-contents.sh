@@ -286,6 +286,17 @@ if [ -f "$OSROOT/usr/share/bootsahi/install-config.schema.json" ]; then
 else
 	echo "  WARN schema not found (not yet a hard requirement)"
 fi
+# The agent refuses every signed install without this list, and a list with no
+# usable entry trusts nobody, so both are hard failures.
+SIGNERS="$OSROOT/usr/share/bootsahi/trusted-signers.json"
+if [ ! -f "$SIGNERS" ]; then
+	bad "trusted-signers.json MISSING — the agent refuses every install without it"
+elif jq -e '(.signers | length) > 0 and all(.signers[]; (.cosignIdentity // "") != "" and (.cosignIssuer // "") != "")' \
+	"$SIGNERS" >/dev/null 2>&1; then
+	ok "trusted signers shipped ($(jq -r '.signers | length' "$SIGNERS") signer(s))"
+else
+	bad "trusted-signers.json lists no usable signer (each needs cosignIdentity and cosignIssuer)"
+fi
 
 # ── 8. SSH toggle (headless install path) ────────────────────────────────
 echo

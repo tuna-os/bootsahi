@@ -1,0 +1,8 @@
+{
+  "signers": [
+    {
+      "cosignIdentity": "https://github.com/tuna-os/.github/.github/workflows/image-build.yml@refs/heads/main",
+      "cosignIssuer": "https://token.actions.githubusercontent.com"
+    }
+  ]
+}

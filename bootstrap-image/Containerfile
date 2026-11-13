@@ -58,6 +58,7 @@ COPY asahi-bootbin-sync /usr/libexec/asahi-bootbin-sync
 COPY bootsahi-agent.service /usr/lib/systemd/system/bootsahi-agent.service
 COPY asahi-bootbin-sync.service /usr/lib/systemd/system/asahi-bootbin-sync.service
 COPY install-config.schema.json /usr/share/bootsahi/install-config.schema.json
+COPY trusted-signers.json /usr/share/bootsahi/trusted-signers.json
 
 RUN chmod 0755 /usr/libexec/bootsahi-agent /usr/libexec/asahi-bootbin-sync /usr/bin/fisherman && \
     chmod 0644 /usr/libexec/bootsahi-agent-recipe.sh /usr/libexec/bootsahi-agent-policy.sh /usr/libexec/bootsahi-agent-device.sh && \
