@@ -45,7 +45,7 @@
 >    `-O verity` for exactly this reason; its manual (`customMounts`) layout,
 >    the one we must use to install beside macOS, did not. Fixed upstream in
 >    [fisherman#70](https://github.com/tuna-os/fisherman/pull/70); the pin here
->    points at that PR until it merges.
+>    includes that fix.
 >
 > Both failed *late* — after the target was formatted and the image deployed
 > (65 layers, 909 MB). On a Mac that is a wiped partition next to the user's
