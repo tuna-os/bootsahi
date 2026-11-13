@@ -219,20 +219,28 @@ verify_target() {
     # GPT partition type: the target must be a Linux filesystem partition.
     # An Apple/APFS/recovery partition handed as 'target' means the recorded
     # PARTUUID is not from this install — the backend creates Linux partitions.
+    # An empty type (probe failed, or not a GPT partition) is not proof of a
+    # Linux target, so it is a refusal too (#176).
     tguid=$(gpt_type_of "$target")
-    if [ -n "$tguid" ]; then
-        if is_apple_partition_type "$tguid"; then
-            log "resolved target $target has Apple GPT type $tguid; refusing (not an install target)"
-            return 1
-        fi
-        if ! is_linux_partition_type "$tguid"; then
-            log "resolved target $target has GPT type $tguid, not the expected Linux filesystem type; refusing"
-            return 1
-        fi
+    if [ -z "$tguid" ]; then
+        log "could not determine GPT type for resolved target $target; refusing to format"
+        return 1
     fi
-    # ESP must be an EFI System Partition.
+    if is_apple_partition_type "$tguid"; then
+        log "resolved target $target has Apple GPT type $tguid; refusing (not an install target)"
+        return 1
+    fi
+    if ! is_linux_partition_type "$tguid"; then
+        log "resolved target $target has GPT type $tguid, not the expected Linux filesystem type; refusing"
+        return 1
+    fi
+    # ESP must be an EFI System Partition. An empty type is a refusal.
     eguid=$(gpt_type_of "$esp")
-    if [ -n "$eguid" ] && [ "$eguid" != "C12A7328-F81F-11D2-BA4B-00A0C93EC93B" ]; then
+    if [ -z "$eguid" ]; then
+        log "could not determine GPT type for resolved ESP $esp; refusing to use it"
+        return 1
+    fi
+    if [ "$eguid" != "C12A7328-F81F-11D2-BA4B-00A0C93EC93B" ]; then
         log "resolved ESP $esp has GPT type $eguid, not the expected ESP type; refusing"
         return 1
     fi

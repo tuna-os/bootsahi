@@ -153,6 +153,43 @@ res=$(resolve_install_devices "$WORK/plain-config.json")
 check "dev override resolves config paths" "/dev/nvme0n1p5 /dev/nvme0n1p4" "$res"
 unset BOOTSAHI_ALLOW_CONFIG_DEVICES
 
+echo "==> verify_target: unknown GPT type is refused (#176)"
+# Stub the probes so verify_target runs without real block devices. These
+# overrides replace the library functions for the rest of this file.
+LINUX_GUID="0FC63DAF-8483-4772-8E79-3D69D8477DE4"
+ESP_GUID="C12A7328-F81F-11D2-BA4B-00A0C93EC93B"
+block_device_id() { echo "8:$1"; }
+active_root_device_id() { echo "8:root"; }
+device_is_mounted() { return 1; }
+parent_disk_of() { echo ""; }
+gpt_type_of() {
+	case "$1" in
+		target) echo "$STUB_TARGET_TYPE" ;;
+		esp) echo "$STUB_ESP_TYPE" ;;
+	esac
+}
+
+STUB_TARGET_TYPE="$LINUX_GUID" STUB_ESP_TYPE="$ESP_GUID"
+set +e
+verify_target target esp >/dev/null 2>&1
+status=$?
+set -e
+check "known Linux target and ESP types accepted" 0 "$status"
+
+STUB_TARGET_TYPE="" STUB_ESP_TYPE="$ESP_GUID"
+set +e
+verify_target target esp >/dev/null 2>&1
+status=$?
+set -e
+check "empty target GPT type refused" 1 "$status"
+
+STUB_TARGET_TYPE="$LINUX_GUID" STUB_ESP_TYPE=""
+set +e
+verify_target target esp >/dev/null 2>&1
+status=$?
+set -e
+check "empty ESP GPT type refused" 1 "$status"
+
 if [ "$fail" -ne 0 ]; then
 	echo "DEVICE UNIT TESTS FAILED"
 	exit 1
