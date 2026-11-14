@@ -3,7 +3,7 @@
 This repo (`tuna-os/bootc-installer-asahi`) is the Apple Silicon (Asahi Linux)
 install path for TunaOS-family bootc images: a macOS app (Bootsahi) plus a
 bootstrap image whose first boot runs
-[fisherman](https://github.com/projectbluefin/fisherman) to `bootc install`
+[fisherman](https://github.com/tuna-os/fisherman) to `bootc install`
 the image the user picked. See [docs/DESIGN.md](docs/DESIGN.md) for
 the architecture and [README.md](README.md) for current status.
 
@@ -31,8 +31,9 @@ swift test -v
 ```
 
 CI (`.github/workflows/bootsahi-app-build.yml`) builds and tests this on
-`macos-14` (and `macos-26` for the Swift 6.2+ Liquid Glass path) on pushes to
-`main` and on PRs touching `macos-app/**`.
+`macos-15` with a pre-6.2 Swift toolchain and a macOS 13 deployment target
+(and on `macos-26` for the Swift 6.2+ Liquid Glass path) on pushes to `main`
+and on PRs touching `macos-app/**`.
 
 ### Shell scripts and the bootstrap/agent harness
 

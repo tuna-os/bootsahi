@@ -18,7 +18,7 @@ macOS-driven install flow for M1/M2 Macs. The repository is
 
 **Architecture** (see [docs/DESIGN.md](docs/DESIGN.md)): instead of one
 installer payload per variant×desktop, we ship **one minimal bootstrap
-payload** whose first boot runs [fisherman](https://github.com/projectbluefin/fisherman)
+payload** whose first boot runs [fisherman](https://github.com/tuna-os/fisherman)
 to `bootc install` the image ref the user picked in the macOS app. The catalog
 is just registry refs (`bonito:gnome-asahi`, …), so a new variant needs no
 installer change — but a ref **must** pass the Asahi golden-manifest harness

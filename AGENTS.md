@@ -64,9 +64,12 @@ gets written to a user's disk on hardware CI cannot fully exercise.
 
 ## macOS CI is deliberately sparing
 
-`bootsahi-app-build.yml` runs on `macos-14` (plus `macos-26` for the Swift
+`bootsahi-app-build.yml` runs on `macos-15` (plus `macos-26` for the Swift
 6.2+ Liquid Glass path) only on pushes to `main` and PRs touching
-`macos-app/**`. The PR trigger was added because push-to-main-only meant a
+`macos-app/**`. `macos-14` retired on 2026-11-02, so the `macos-15` jobs pin
+what that host used to supply: a pre-6.2 Swift toolchain and
+`MACOSX_DEPLOYMENT_TARGET=13.0`, asserted on the built binary (#171). Do not
+drop either pin because the host is newer. The PR trigger was added because push-to-main-only meant a
 Swift change was compile-checked *after* it landed — the first sign of a break
 was a red main. Keep the paths filter; don't widen it to every push.
 
