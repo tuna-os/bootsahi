@@ -15,6 +15,9 @@ selftest:
 backend-contract:
     ./scripts/test-backend-contract.sh
 
+asahi-bootbin-sync:
+    ./components/asahi-bootbin-sync/test-asahi-bootbin-sync.sh
+
 agent:
     ./components/bootsahi-agent/test-agent.sh
 
