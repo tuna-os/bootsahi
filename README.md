@@ -92,3 +92,18 @@ Payload layout & `installer_data.json` schema modeled on
 fedora-asahi kiwi-descriptions and
 [nixos-asahi-package](https://github.com/quinneden/nixos-asahi-package).
 M1/M2 only — M3+ has no Asahi installer support yet.
+
+## Intel Macs (Bootsahi Legacy)
+
+Bootsahi Legacy is the companion migration path for Intel Macs, with or
+without the T2 chip. It supports **macOS 10.13 High Sierra and later**, so it
+is usable on the macOS releases these machines may be unable to upgrade
+beyond. It is a separate USB-based flow: it does not reuse the Apple-Silicon
+APFS/asahi-installer backend. See [the legacy design](docs/LEGACY-T2.md).
+
+Intel Macs without a T2 chip use the normal `x86_64` TunaOS images.
+
+T2 images are `x86_64` `*-t2` bootc images and must include the T2 hardware
+stack. The Broadcom Wi-Fi firmware is not redistributable, so no image contains
+it. During migration, Bootsahi extracts it from the local macOS installation. The legacy preflight is at
+[`legacy/bootsahi-legacy`](legacy/bootsahi-legacy).
