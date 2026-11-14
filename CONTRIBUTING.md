@@ -54,6 +54,9 @@ sudo ./scripts/selftest.sh
 # bootsahi-agent: install-config.json -> recipe.json contract
 ./components/bootsahi-agent/test-agent.sh
 
+# asahi-bootbin-sync: boot.bin staleness/backup/restore logic (hermetic, no root)
+./components/asahi-bootbin-sync/test-asahi-bootbin-sync.sh
+
 # Disk resolution + real fisherman `validate` (needs root, gdisk, a built fisherman)
 sudo ./components/bootsahi-agent/test-agent-disk.sh
 ```
