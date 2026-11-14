@@ -64,8 +64,8 @@ sudo ./components/bootsahi-agent/test-agent-disk.sh
 `.github/workflows/selftest.yml` runs the lint job plus these harness tests on
 every PR. `test-agent-install.sh` (a real `bootc install` against a stand-in
 image) and `test-bootstrap-boot.sh` (boots the bootstrap image under
-qemu+U-Boot) are heavier and run as part of `build-payload.yml` /
-`selftest.yml`'s `install-selftest` job rather than on every PR.
+qemu+U-Boot) are heavier. They run in `build-payload.yml` and in the
+`install-selftest` job of `selftest.yml`, not on every PR.
 
 ## Code style
 

@@ -98,8 +98,8 @@ projectbluefin does not have. These items were missing:
 
 At the time, we updated the `bootsahi-agent` README and the hardware test
 checklist to point at `projectbluefin/fisherman`. That workaround is gone:
-both now point at `tuna-os/fisherman`, and `projectbluefin/fisherman` is
-archived. These failures occur only when the input is not a mock stdin.
+both now point at `tuna-os/fisherman`, and the owners archived
+`projectbluefin/fisherman`. These failures occur only when the input is not a mock stdin.
 
 ## The handoff: how install-config.json gets to the ESP
 
@@ -321,13 +321,13 @@ never checked what the mount *does*.
 ### Also confirms the `MountType` problem in RFC §5, with a line number
 
 `custom.go:85` was `runner.Run("mount", s.Partition, hostTarget)`, with no
-`-t`. That is the bug from §5 (no explicit type). When this section was
-written, it was live in `tuna-os/fisherman`, and it said
-`projectbluefin/fisherman` had already fixed it and recommended building from
-the projectbluefin fork.
+`-t`. That is the bug from §5 (no explicit type). When we wrote this
+section, the bug was live in `tuna-os/fisherman`. The section said that
+`projectbluefin/fisherman` had already fixed it, and it recommended a build
+from the projectbluefin fork.
 
-That recommendation is superseded. tuna-os/fisherman#59 synced the forks,
-`projectbluefin/fisherman` is archived, and this repository builds from
+We withdraw that recommendation. tuna-os/fisherman#59 synced the forks, the
+owners archived `projectbluefin/fisherman`, and this repository builds from
 `tuna-os/fisherman` at the pinned `FISHERMAN_REV`. The fork choice never
 closed this gap for the manual layout, though: the archived fork's
 `custom.go` also mounts with no `-t`. On `tuna-os/fisherman` `dev`, the
