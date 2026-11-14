@@ -97,7 +97,7 @@ possible without RunsOn. It can do these tasks:
 It cannot do the install that the Alpha gate needs. The asahi-installer must
 reboot into recoveryOS to set the boot policy for the new system. That step
 needs a person at the Mac to hold the power button. An EC2 Mac has no console
-for this step. The hosted `macos-14` and `macos-26` runners already do the app
+for this step. The hosted `macos-15` and `macos-26` runners already do the app
 build. Thus a dedicated EC2 Mac adds only the XCTest coverage, at the
 cost of a 24-hour minimum each time it starts.
 

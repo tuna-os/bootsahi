@@ -3,21 +3,29 @@
 D1's first-boot agent for the "bootsahi" bootstrap image (see
 [`docs/DESIGN.md`](../../docs/DESIGN.md)): translates `install-config.json`
 (written by the Bootsahi macOS app onto the ESP) into a
-[fisherman](https://github.com/projectbluefin/fisherman) `recipe.json` and
+[fisherman](https://github.com/tuna-os/fisherman) `recipe.json` and
 drives an unattended `bootc install to-filesystem`.
 
-**Fork choice matters here.** wootc (the Windows sibling of this project,
+**Fork choice matters here.** Build fisherman from `tuna-os/fisherman`
+(branch `dev`). `projectbluefin/fisherman` is archived.
+
+*History:* wootc (the Windows sibling of this project,
 see [issue #6](https://github.com/tuna-os/bootc-installer-asahi/issues/6))
-vendored `projectbluefin/fisherman`, which had real fixes `tuna-os/fisherman`
-lacks as of 2026-07-18 (six days stale at time of writing): an explicit
+vendored `projectbluefin/fisherman`, which on 2026-07-18 had real fixes that
+`tuna-os/fisherman` then lacked: an explicit
 `mount -t` for the freshly-formatted root (the deployer initramfs can't
 probe the filesystem type, so an xfs root gets attempted as ext4 and fails),
 and the useradd handling (which is NOT simply "chroot instead of --root" —
 that was reversed for composefs-native; see docs/UNIFIED-INSTALL-CONTRACT.md)
 (`--root` also
 initializes the *host's* PAM/SELinux stack and fails against an otherwise
-perfectly writable target). Point `BOOTSAHI_FISHERMAN_BIN` at a binary
-built from `tuna-os/fisherman` (now synced — see tuna-os/fisherman#59).
+perfectly writable target). tuna-os/fisherman#59 synced the two forks. One
+caveat survives the sync: in the `customMounts` path this agent uses,
+`tuna-os/fisherman` passes an explicit `-t` only for btrfs, and the archived
+fork passed none (see
+[`docs/UNIFIED-INSTALL-CONTRACT.md`](../../docs/UNIFIED-INSTALL-CONTRACT.md)).
+Point `BOOTSAHI_FISHERMAN_BIN` at a binary built from `tuna-os/fisherman` at
+the pinned `FISHERMAN_REV` (see `scripts/build-bootstrap-image.sh`).
 
 **Not** `bootc install to-disk` — that path (used by this repo's own
 `scripts/make-payload.sh` / `scripts/test-payload.sh`) is debug/QEMU-only,

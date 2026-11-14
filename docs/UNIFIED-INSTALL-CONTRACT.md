@@ -56,8 +56,9 @@ contract below both installers:
 **Action in this PR:** the `user.password` field in
 `install-config.schema.json` now documents the `$6$` hash convention.
 
-- The fisherman `chpasswd` step (`projectbluefin/fisherman` only, see below)
-  already finds a value that starts with `$` and passes `chpasswd -e`.
+- The fisherman `chpasswd` step finds a value that starts with `$` and
+  passes `chpasswd -e`. This was once in `projectbluefin/fisherman` only (see
+  below); `tuna-os/fisherman` has it too (`internal/post/user.go`).
 - fisherman also accepts a plain string. But then the password stays in the
   file in clear text until the install completes.
 - The macOS app must hash the password client-side, as `vault_windows.go`
@@ -95,9 +96,10 @@ projectbluefin does not have. These items were missing:
   shows only one step of this sequence, not the result. Earlier revisions of
   this document had that error.
 
-We updated the `bootsahi-agent` README and the hardware test checklist to
-point at `projectbluefin/fisherman`. Fix this before tests on a real disk, not
-after. These failures occur only when the input is not a mock stdin.
+At the time, we updated the `bootsahi-agent` README and the hardware test
+checklist to point at `projectbluefin/fisherman`. That workaround is gone:
+both now point at `tuna-os/fisherman`, and `projectbluefin/fisherman` is
+archived. These failures occur only when the input is not a mock stdin.
 
 ## The handoff: how install-config.json gets to the ESP
 
@@ -318,10 +320,21 @@ never checked what the mount *does*.
 
 ### Also confirms the `MountType` problem in RFC §5, with a line number
 
-`custom.go:85` is `runner.Run("mount", s.Partition, hostTarget)`, with no
-`-t`. That is the bug from §5 (no explicit type). It is live in
-`tuna-os/fisherman` today, and `projectbluefin/fisherman` already fixed it.
-This makes the recommendation stronger: build from the projectbluefin fork.
+`custom.go:85` was `runner.Run("mount", s.Partition, hostTarget)`, with no
+`-t`. That is the bug from §5 (no explicit type). When this section was
+written, it was live in `tuna-os/fisherman`, and it said
+`projectbluefin/fisherman` had already fixed it and recommended building from
+the projectbluefin fork.
+
+That recommendation is superseded. tuna-os/fisherman#59 synced the forks,
+`projectbluefin/fisherman` is archived, and this repository builds from
+`tuna-os/fisherman` at the pinned `FISHERMAN_REV`. The fork choice never
+closed this gap for the manual layout, though: the archived fork's
+`custom.go` also mounts with no `-t`. On `tuna-os/fisherman` `dev`, the
+`customMounts` path passes an explicit type only for btrfs
+(`MountType(..., "btrfs", ...)`). Every other fstype still goes through a
+plain `mount`. The aarch64 check in the hardware test checklist still has to
+confirm that the Asahi initramfs can probe the root filesystem.
 
 ## One correction to issue #6 §5
 
