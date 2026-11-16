@@ -119,8 +119,8 @@ Why this wins:
    interactive flow (diskutil/bless/bputil) still needs a real Mac. **Not** opened
    as an upstream PR — awaiting James's go-ahead per the standing "no
    upstream outreach" rule.
-4. **D3** — *(skeleton scaffolded; `swift build`/`swift test` CI-green on a
-   GitHub macos-14 runner, not yet run on real hardware)* SwiftUI app
+4. **D3** — *(skeleton scaffolded; `swift build`/`swift test` CI-green on
+   GitHub macos-15 and macos-26 runners, not yet run on real hardware)* SwiftUI app
    ([`macos-app/Bootsahi`](../macos-app/Bootsahi)) driving the backend;
    notarized DMG; catalog.json generation in CI. `.github/workflows/
    bootsahi-app-build.yml` gives real compiler feedback without needing a
