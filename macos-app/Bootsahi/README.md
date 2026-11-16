@@ -7,13 +7,17 @@ D2) over its `--json` stdio protocol
 ([`docs/json-mode.md`](https://github.com/tuna-os/bootc-installer-asahi/blob/json-machine-mode/docs/json-mode.md)).
 
 **Written with no local Swift toolchain** — no macOS host in the environment
-that produced it. It was, however, subsequently built and tested for real on
-a GitHub-hosted `macos-14` runner (Xcode 15.4, Swift 5.10) via
-[`bootsahi-app-build.yml`](../../.github/workflows/bootsahi-app-build.yml)
-(dispatch manually with `gh workflow run bootsahi-app-build.yml --ref
-feat/d3-bootsahi-app-skeleton`, or check the Actions tab): **`swift build`
-succeeds and all 8 tests in `BackendEventDecodingTests` pass**, with zero
-compiler warnings. That proves the Codable models, the protocol round-trip,
+that produced it. CI builds and tests it on GitHub-hosted runners with
+[`bootsahi-app-build.yml`](../../.github/workflows/bootsahi-app-build.yml).
+The workflow runs on pushes to `main` and on PRs that change `macos-app/**`.
+It uses `macos-15` with a pre-6.2 Swift toolchain and a macOS 13 deployment
+target, and `macos-26` for the Swift 6.2+ Liquid Glass path. To run it on
+`main` by hand, use
+`gh workflow run bootsahi-app-build.yml -R tuna-os/bootsahi --ref main`,
+or the Actions tab. The first CI run was on `macos-14` (Xcode 15.4, Swift
+5.10): **`swift build` succeeded and all 8 tests in
+`BackendEventDecodingTests` passed**, with zero compiler warnings. That
+proves the Codable models, the protocol round-trip,
 and the SwiftUI view graph all type-check and link. It does **not** prove:
 the app actually launches and shows a window, `InstallerProcess` correctly
 drives a real `python3 main.py --json` subprocess, or any of the recoveryOS/
