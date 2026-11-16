@@ -1,0 +1,3 @@
+# Mirrors the CI gate (`shellcheck -S warning`, .github/workflows/selftest.yml)
+# so local runs match CI.
+severity=warning
