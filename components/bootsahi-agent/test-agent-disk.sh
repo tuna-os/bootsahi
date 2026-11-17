@@ -209,6 +209,16 @@ elif [ ! -f "$WORK/recipe-captured.json" ]; then
 	echo "FAIL: no recipe was captured to validate"
 	fail=1
 else
+	# A validator built from another revision than the image ships proves
+	# nothing about the image. The selftest.yml build step and
+	# bootstrap-image/fisherman.rev are separate edits, so check, don't trust.
+	if "$HERE/../../scripts/fisherman-rev.sh" --check "$FISHERMAN_VALIDATE_BIN"; then
+		echo "ok: the validating fisherman is the revision the bootstrap image ships"
+	else
+		echo "FAIL: the validating fisherman is not the revision in bootstrap-image/fisherman.rev"
+		fail=1
+	fi
+
 	if out=$("$FISHERMAN_VALIDATE_BIN" validate "$WORK/recipe-captured.json" 2>&1); then
 		echo "ok: fisherman validate accepted the generated recipe"
 		echo "    ($("$FISHERMAN_VALIDATE_BIN" version 2>/dev/null | head -1))"

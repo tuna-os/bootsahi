@@ -622,6 +622,38 @@ else
 fi
 
 echo
+# test-agent-disk.sh and test-agent-install.sh refuse a fisherman that was not
+# built from bootstrap-image/fisherman.rev. CI only runs those as root with a
+# freshly built binary, so the guard's verdicts are pinned here, against fake
+# build stamps, on every machine.
+echo "==> fisherman revision guard (scripts/fisherman-rev.sh)"
+REVTOOL="$HERE/../../scripts/fisherman-rev.sh"
+pinned=$("$REVTOOL")
+check "fisherman.rev holds a 40-character commit SHA" "40" "${#pinned}"
+other=1111111111111111111111111111111111111111
+stamp() { # file revision modified
+	printf 'junk\0build\tvcs=git\nbuild\tvcs.revision=%s\nbuild\tvcs.modified=%s\n' "$2" "$3" >"$1"
+}
+rev_rc() { # bin [pin-file]
+	local rc=0
+	if [ -n "${2:-}" ]; then
+		FISHERMAN_REV_FILE="$2" "$REVTOOL" --check "$1" >/dev/null 2>&1 || rc=$?
+	else
+		"$REVTOOL" --check "$1" >/dev/null 2>&1 || rc=$?
+	fi
+	echo "$rc"
+}
+stamp "$WORK/fm-pinned" "$pinned" false
+stamp "$WORK/fm-other" "$other" false
+stamp "$WORK/fm-dirty" "$pinned" true
+printf 'no build info here\n' >"$WORK/fm-unstamped"
+printf '# comment only\n' >"$WORK/rev-empty"
+check "accepts a binary built from the pinned revision" "0" "$(rev_rc "$WORK/fm-pinned")"
+check "rejects a binary built from another revision" "1" "$(rev_rc "$WORK/fm-other")"
+check "rejects a binary built from a modified checkout" "1" "$(rev_rc "$WORK/fm-dirty")"
+check "cannot vouch for a binary with no vcs stamp" "2" "$(rev_rc "$WORK/fm-unstamped")"
+check "fails closed on a pin file with no SHA" "2" "$(rev_rc "$WORK/fm-pinned" "$WORK/rev-empty")"
+
 echo "==> device resolution & partition safety unit tests"
 if "$HERE/test-agent-device.sh"; then
 	echo "ok: device library unit tests passed"

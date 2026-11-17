@@ -45,14 +45,16 @@ Two claims stay separate (see
 packaging — versus **"the product installs"**, which needs the bootstrap
 containing `bootsahi-agent`. A stock desktop image boots and cannot install.
 
-## The fisherman pin is duplicated three times
+## The fisherman pin lives in one file
 
-The same SHA appears in `scripts/build-bootstrap-image.sh` (`FISHERMAN_REV`)
-and twice in `selftest.yml`, each marked "Keep in sync" — with nothing
-enforcing it. Change one and the disk selftest can validate against a
-different fisherman than the bootstrap ships.
+`bootstrap-image/fisherman.rev` holds the fisherman SHA.
+`scripts/build-bootstrap-image.sh` reads it through `scripts/fisherman-rev.sh`.
+`selftest.yml` still repeats the SHA in two build steps (#203).
+`test-agent-disk.sh` and `test-agent-install.sh` read the `vcs.revision` stamp
+in the binary they get. They fail if it is not the SHA in `fisherman.rev`.
+Thus a re-pin that misses a copy turns CI red.
 
-All three pin `205e07d`, the squash merge of
+The pin is `205e07d`, the squash merge of
 [fisherman#70](https://github.com/tuna-os/fisherman/pull/70) on `dev`.
 Pin only a commit on `dev`. Do not pin a PR branch head: a squash merge
 leaves that head off `dev`. When someone deletes the branch, a fresh
