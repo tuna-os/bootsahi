@@ -67,6 +67,15 @@ if [ -z "$FISHERMAN_BIN" ] || [ ! -x "$FISHERMAN_BIN" ]; then
 	exit 0
 fi
 
+# An install by another fisherman than the image ships observes the wrong
+# consumer. The selftest.yml build step and bootstrap-image/fisherman.rev are
+# separate edits, so check, don't trust.
+if ! "$HERE/../../scripts/fisherman-rev.sh" --check "$FISHERMAN_BIN"; then
+	echo "FAIL: $FISHERMAN_BIN is not the revision in bootstrap-image/fisherman.rev."
+	echo "      Build fisherman at \$(./scripts/fisherman-rev.sh) and point FISHERMAN_BIN at it."
+	exit 1
+fi
+
 WORK=$(mktemp -d)
 LOOP=""
 cleanup() {

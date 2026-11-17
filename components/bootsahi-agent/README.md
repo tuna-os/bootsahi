@@ -25,7 +25,7 @@ caveat survives the sync: in the `customMounts` path this agent uses,
 fork passed none (see
 [`docs/UNIFIED-INSTALL-CONTRACT.md`](../../docs/UNIFIED-INSTALL-CONTRACT.md)).
 Point `BOOTSAHI_FISHERMAN_BIN` at a binary built from `tuna-os/fisherman` at
-the pinned `FISHERMAN_REV` (see `scripts/build-bootstrap-image.sh`).
+the pinned revision in `bootstrap-image/fisherman.rev`.
 
 **Not** `bootc install to-disk` — that path (used by this repo's own
 `scripts/make-payload.sh` / `scripts/test-payload.sh`) is debug/QEMU-only,

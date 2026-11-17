@@ -1,0 +1,16 @@
+# The tuna-os/fisherman revision this repository ships in the bootstrap image
+# and runs its disk and real-install selftests against. It is the only place
+# the revision is written. scripts/fisherman-rev.sh reads it.
+#
+# 205e07d is the squash merge of tuna-os/fisherman#70 on dev. It adds
+# -O verity to the manual-layout ext4 mkfs. bootc's --composefs-backend calls
+# FS_IOC_ENABLE_VERITY, and ext4 refuses that unless the feature was set at
+# format time. Without it, a composefs install onto customMounts fails after
+# the target is formatted.
+#
+# Pin a commit on dev, never a PR branch head. A squash merge leaves the head
+# off dev, and deleting the branch makes it unreachable (#106).
+#
+# Re-pinning is a maintainer decision: it changes what is written to a user's
+# disk (AGENTS.md).
+205e07def4d2a99784a6c905152a9a5ac138e05a
