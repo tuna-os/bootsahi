@@ -61,11 +61,24 @@ sudo ./scripts/selftest.sh
 sudo ./components/bootsahi-agent/test-agent-disk.sh
 ```
 
-`.github/workflows/selftest.yml` runs the lint job plus these harness tests on
-every PR. `test-agent-install.sh` (a real `bootc install` against a stand-in
-image) and `test-bootstrap-boot.sh` (boots the bootstrap image under
-qemu+U-Boot) are heavier. They run in `build-payload.yml` and in the
-`install-selftest` job of `selftest.yml`, not on every PR.
+`.github/workflows/selftest.yml` runs on every PR and on pushes to `main`. Its
+`lint` and `selftest` jobs run the commands above, except
+`test-asahi-bootbin-sync.sh`: no workflow runs that test yet (#201). Its
+`install-selftest` job runs `test-agent-install.sh` (a real `bootc install`
+against a stand-in image) on `ubuntu-26.04-arm`.
+
+`test-bootstrap-boot.sh` builds the bootstrap image and boots it under
+qemu+U-Boot. It runs only when a person starts `bootstrap-boot.yml` by hand
+(`workflow_dispatch`).
+
+Other PR checks:
+
+- `actions-security.yml` (every PR): `gh actions-lock --verify` checks
+  `.github/workflows/actions.lock`, and zizmor lints the workflows.
+- `actionlint.yml` (PRs that change `.github/workflows/**`): actionlint.
+- `ste.yml` (PRs that change Markdown or `.ste-budget`): a check of the
+  Markdown against Simplified Technical English. The number of findings must
+  not go above the number in `.ste-budget`.
 
 ## Code style
 
