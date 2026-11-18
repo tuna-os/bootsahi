@@ -1,10 +1,11 @@
 # Bootsahi (macOS app) — SwiftUI frontend, partially CI-verified
 
 D3 from [`docs/DESIGN.md`](../../docs/DESIGN.md): a SwiftUI app driving the
-forked asahi-installer backend
-([`tuna-os/bootc-installer-asahi@json-machine-mode`](https://github.com/tuna-os/bootc-installer-asahi/tree/json-machine-mode),
-D2) over its `--json` stdio protocol
-([`docs/json-mode.md`](https://github.com/tuna-os/bootc-installer-asahi/blob/json-machine-mode/docs/json-mode.md)).
+forked asahi-installer backend (D2) over its `--json` stdio protocol. This
+repository owns that protocol in
+[`docs/D2-JSON-MACHINE-MODE.md`](../../docs/D2-JSON-MACHINE-MODE.md).
+[`scripts/test-backend-contract.sh`](../../scripts/test-backend-contract.sh)
+pins the backend fork and revision (`BACKEND_REPO`, `BACKEND_REV`).
 
 **Written with no local Swift toolchain** — no macOS host in the environment
 that produced it. CI builds and tests it on GitHub-hosted runners with
@@ -35,7 +36,7 @@ by `swift build`/`swift test` in CI.
 ## What exists
 
 - `Models/` — `BackendEvent`/`BackendAsk`/`BackendMessage`/`JSONValue`
-  mirror `docs/json-mode.md` exactly (by hand — no shared schema/codegen
+  mirror `docs/D2-JSON-MACHINE-MODE.md` exactly (by hand — no shared schema/codegen
   with the Python side yet). `InstallConfig` mirrors
   `components/bootsahi-agent/install-config.schema.json` in this same repo
   (also by hand, also needs to be kept in sync manually).
@@ -55,9 +56,12 @@ by `swift build`/`swift test` in CI.
   `install.sh` already solves this for the curl-|-sh path (provisions a
   venv); Bootsahi should probably reuse that rather than bundling a Python
   runtime. Not decided — see the comment in `InstallerProcess.swift`.
-- **catalog.json generation in CI.** `Resources/catalog.json` is a single
-  hand-written placeholder entry. The real thing (generated from
-  registry-map.yaml, per DESIGN.md) doesn't exist yet.
+- **catalog.json generation in CI.** `Resources/catalog.json` has two
+  hand-written entries, `bonito` and `grouper`, both `verified: true`.
+  `scripts/validate-catalog.sh` (selftest lint job) fails a `verified: true`
+  entry that has no clean record in `docs/harness-results.json` (#104). The
+  real thing (generated from registry-map.yaml, per DESIGN.md) doesn't exist
+  yet.
 - **Backend discovery for packaged distribution.** The app drives a real
   process session when `BOOTSAHI_BACKEND_MAIN` is supplied (the development
   and CI seam), or when a future bundle contains

@@ -45,9 +45,11 @@ have durable evidence linked from the release notes:
 - [ ] Confirm the installer refuses unsupported Macs and unverified catalog
       entries before making disk changes.
 - [ ] Replace the hand-maintained catalog trust bit with CI-generated harness
-      evidence ([#70](https://github.com/tuna-os/bootc-installer-asahi/issues/70)),
-      and have the same job establish currency alongside provenance under the
-      catalog currency contract below.
+      evidence, and have the same job establish currency alongside provenance
+      under the catalog currency contract below. #70 closed when #104 added
+      only an interim guard: `scripts/validate-catalog.sh` checks each
+      `verified: true` entry against the hand-written
+      `docs/harness-results.json`. CI generation is still to do.
 - [ ] State that Alpha ships GNOME only, so single-desktop coverage is a
       recorded scope decision rather than an unexamined default.
 - [ ] Publish a signed and notarized DMG, checksums, supported-host statement,
