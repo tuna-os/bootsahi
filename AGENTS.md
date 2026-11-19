@@ -1,4 +1,4 @@
-# AGENTS.md — agent guide for tuna-os/bootc-installer-asahi
+# AGENTS.md — agent guide for tuna-os/bootsahi
 
 The **Apple Silicon install path** for TunaOS-family bootc images: a macOS
 SwiftUI app (Bootsahi) plus a minimal bootstrap payload whose first boot runs

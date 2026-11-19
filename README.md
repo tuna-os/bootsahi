@@ -3,7 +3,7 @@
 Bootsahi is the Apple Silicon (Asahi Linux) installer path for TunaOS-family
 bootc images — and anyone else's (Dakota, Bluefin, Bazzite). It is a
 macOS-driven install flow for M1/M2 Macs. The repository is
-`tuna-os/bootc-installer-asahi`.
+`tuna-os/bootsahi`.
 
 <p align="center">
   <img src="docs/screenshots/walkthrough.gif"

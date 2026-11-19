@@ -69,7 +69,7 @@ shows which mode it used.
 
 Before the RunsOn path can work, a maintainer must do these steps:
 
-1. Install the RunsOn app on `tuna-os/bootc-installer-asahi`. It
+1. Install the RunsOn app on `tuna-os/bootsahi`. It
    has access to other tuna-os repositories now.
 2. Make sure that the RunsOn stack can start Graviton `.metal` instances in
    its AWS region and account limits.
