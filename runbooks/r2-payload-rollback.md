@@ -36,7 +36,7 @@ Signs to look for:
 Every publish run logs the backup prefix it wrote to
 (`asahi/backups/<run_id>/`) in the "Upload payload to Cloudflare R2" step
 output. Find the run **before** the bad one in the workflow's run history
-(`gh run list --repo tuna-os/bootc-installer-asahi --workflow "Build asahi-installer payload"`)
+(`gh run list --repo tuna-os/bootsahi --workflow "Build asahi-installer payload"`)
 and take its run ID — that run's backup step, if it ran, holds what was live
 immediately before it published, i.e. two publishes back from the bad one.
 
