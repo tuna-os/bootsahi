@@ -97,8 +97,10 @@ Why this wins:
   handles it; the bootstrap's dracut module consumes it).
 
 ## Milestones
-1. **D0** — *(payload pipeline + QEMU boot-gate proven; R2 upload still
-   blocked on bucket credentials being added as repo secrets)* CI job builds
+1. **D0** — *(payload pipeline + QEMU boot-gate proven; R2 publish live
+   since #216: each release goes to `asahi/releases/<version>/`, then the
+   `installer_data.json` pointer moves, see
+   [`runbooks/r2-payload-rollback.md`](../runbooks/r2-payload-rollback.md))* CI job builds
    `bootsahi-boot` (bonito-asahi minimal) + payload zip + installer_data.json
    to R2; manual install with stock asahi-installer TUI pointed at our URL;
    QEMU boot-gate the bootstrap on every build.

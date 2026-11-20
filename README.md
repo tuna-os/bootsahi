@@ -86,7 +86,7 @@ The project distinguishes two claims that are easy to conflate (see #27):
 |---|---|---|
 | **"A payload boots"** | `test-payload.sh` + `test-boot-payload.sh` | The kernel, DTBs, modules, and U-Boot EFI chain work. Any asahi-capable image passes this — it proves the *packaging*, not the *product*. |
 | **"The bootstrap handoff is green"** | `test-agent.sh` + `test-agent-disk.sh` + `test-agent-install.sh` | The agent generates a valid recipe, the recipe passes real fisherman `validate`, and a real `bootc install` succeeds end-to-end (canaries on ESP / neighbour / bootstrap / target). |
-| **"The bootstrap image contains everything it needs"** | `test-bootstrap-contents.sh` | Static verification: bootsahi-agent, enabled unit, fisherman, cosign, jq, nmcli, blkid — all present and accounted for. Also gates a negative fixture (agent removed → must fail). |
+| **"The bootstrap image contains everything it needs"** | `test-bootstrap-contents.sh` | Static verification: bootsahi-agent, enabled unit, fisherman, cosign, skopeo, jq, nmcli, blkid and a non-empty `trusted-signers.json` — all present and accounted for. Also gates a negative fixture (agent removed → must fail). |
 | **"The actual bootstrap image boots"** | `test-bootstrap-boot.sh` (opt-in) | Build, package, and boot the repo's own bootstrap under qemu+U-Boot. The deepest fidelity achievable without Apple hardware. Needs aarch64 + qemu + u-boot-qemu. |
 
 Payload layout & `installer_data.json` schema modeled on
