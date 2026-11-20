@@ -1,8 +1,10 @@
 name: Build asahi-installer payload
 
 # D0 of docs/DESIGN.md: package the bootsahi bootstrap as an asahi-installer
-# payload (esp/ + root.img zip + installer_data.json). Artifact-only until R2
-# credentials are wired.
+# payload (esp/ + root.img zip + installer_data.json). With upload_r2 on main,
+# a tested payload is published as an immutable release under
+# download.tunaos.org/asahi/releases/<version>/, and then the
+# asahi/installer_data.json pointer moves to it (#99, #132).
 #
 # The image is run `--privileged --pid=host` with the host's /dev, in a job
 # that can hold R2 credentials, so it must be exactly a bootstrap that a main
@@ -42,11 +44,17 @@ permissions:
 env:
   BOOTSTRAP_IDENTITY: https://github.com/tuna-os/bootsahi/.github/workflows/build-bootstrap-image.yml@refs/heads/main
   BOOTSTRAP_ISSUER: https://token.actions.githubusercontent.com
+  PUBLIC_BASE: https://download.tunaos.org/asahi
 
 jobs:
   payload:
     runs-on: ubuntu-26.04-arm
-    timeout-minutes: 90
+    timeout-minutes: 120
+    # One payload run at a time, so two publishes can never interleave their
+    # release uploads or pointer moves (#132). Queued runs wait; none is cancelled.
+    concurrency:
+      group: asahi-payload
+      cancel-in-progress: false
     steps:
       - uses: actions/checkout@v7.0.1
         with:
@@ -95,19 +103,31 @@ jobs:
             /usr/local/share/boost /opt/hostedtoolcache/CodeQL || true
           df -h /
 
+      - name: Choose the release version
+        # Unique per run and attempt, so a release prefix is written once and
+        # never reused (#132).
+        id: version
+        run: echo "version=$(date -u +%Y%m%d)-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}" >> "$GITHUB_OUTPUT"
+
       - name: Build payload
         env:
           TARGET_MIN_GB: ${{ inputs.target_min_gb }}
           PAYLOAD_IMAGE: ${{ steps.verify.outputs.pinned }}
           PAYLOAD_NAME: ${{ inputs.name }}
           PAYLOAD_SIZE_GB: ${{ inputs.bootstrap_size_gb }}
+          RELEASE_VERSION: ${{ steps.version.outputs.version }}
         run: |
-          sudo -E ./scripts/make-payload.sh "$PAYLOAD_IMAGE" "$PAYLOAD_NAME" "$PAYLOAD_SIZE_GB"
+          # installer_data.json names this release's own immutable zip URL; the
+          # stable asahi/installer_data.json pointer is a copy of it, written
+          # only after the release is uploaded and verified.
+          BASE_URL="${PUBLIC_BASE}/releases/${RELEASE_VERSION}" \
+            sudo -E ./scripts/make-payload.sh "$PAYLOAD_IMAGE" "$PAYLOAD_NAME" "$PAYLOAD_SIZE_GB"
           # Which verified bootstrap this payload packages, and from which
           # revision of this repo, so a published payload can be traced back
           # and rolled back to an exact input (#122).
           jq -n --arg image "$PAYLOAD_IMAGE" --arg sha "$GITHUB_SHA" --arg run "$GITHUB_RUN_ID" \
-            '{bootstrapImage: $image, sourceSha: $sha, runId: $run}' \
+            --arg version "$RELEASE_VERSION" \
+            '{version: $version, bootstrapImage: $image, sourceSha: $sha, runId: $run}' \
             | sudo tee "out/$PAYLOAD_NAME.provenance.json"
 
       - name: "Test: payload structure, boot chain, rootfs, installer_data"
@@ -142,8 +162,12 @@ jobs:
           path: out/
           retention-days: 14
 
-      - name: Upload payload to Cloudflare R2
-        if: inputs.upload_r2
+      - name: Publish release to Cloudflare R2 and move the pointer
+        # Runs only after every test above passed, and only from main. Writes
+        # only under asahi/ (the bucket also serves live-isos/) and deletes
+        # nothing; see scripts/publish-payload-r2.sh and
+        # runbooks/r2-payload-rollback.md (#99, #132).
+        if: ${{ inputs.upload_r2 && github.ref == 'refs/heads/main' }}
         env:
           RCLONE_CONFIG_R2_TYPE: s3
           RCLONE_CONFIG_R2_PROVIDER: Cloudflare
@@ -153,6 +177,7 @@ jobs:
           RCLONE_CONFIG_R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
           R2_BUCKET: ${{ secrets.R2_BUCKET }}
           PAYLOAD_NAME: ${{ inputs.name }}
+          RELEASE_VERSION: ${{ steps.version.outputs.version }}
         run: |
           set -euo pipefail
           for required in \
@@ -165,13 +190,12 @@ jobs:
               exit 1
             fi
           done
-          ZIP="out/${PAYLOAD_NAME}.zip"
-          DATA="out/installer_data.json"
-          [[ -f "$ZIP" ]] || { echo "::error::Payload zip not found"; exit 1; }
-          [[ -f "$DATA" ]] || { echo "::error::installer_data.json not found"; exit 1; }
-          echo "==> Uploading payload ($ZIP and $DATA) to R2..."
-          rclone copy --log-level INFO --checksum --s3-no-check-bucket \
-            "$ZIP" "R2:${R2_BUCKET}/asahi/"
-          rclone copy --log-level INFO --checksum --s3-no-check-bucket \
-            "$DATA" "R2:${R2_BUCKET}/asahi/"
-          echo "==> Published payload to R2 bucket ${R2_BUCKET}/asahi/"
+          command -v rclone >/dev/null || { sudo apt-get update && sudo apt-get install -y rclone; }
+          ./scripts/publish-payload-r2.sh out "$PAYLOAD_NAME" "$RELEASE_VERSION" \
+            "R2:${R2_BUCKET}/asahi" "$PUBLIC_BASE"
+          {
+            echo "### Published asahi payload ${RELEASE_VERSION}"
+            echo
+            echo "- Pointer: ${PUBLIC_BASE}/installer_data.json"
+            echo "- Payload: ${PUBLIC_BASE}/releases/${RELEASE_VERSION}/${PAYLOAD_NAME}.zip"
+          } >> "$GITHUB_STEP_SUMMARY"
