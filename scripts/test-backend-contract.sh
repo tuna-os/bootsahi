@@ -174,12 +174,25 @@ done
 # would look completely reasonable in review.
 echo
 echo "==> the agent must not resolve by the macOS device name"
-if grep -q "macos_device" components/bootsahi-agent/bootsahi-agent.sh 2>/dev/null; then
+# The agent is several shipped libraries, and stub_info.json is read in
+# bootsahi-agent-device.sh, not in bootsahi-agent.sh (#156 moved it). So scan
+# every shipped agent source. First check that the scan includes the code that
+# reads the partition records. A scan that misses the reader passes whatever
+# the reader does.
+AGENT_SOURCES=(components/bootsahi-agent/bootsahi-agent*.sh)
+if [ ! -f "${AGENT_SOURCES[0]}" ]; then
+	echo "FAIL: no agent sources match components/bootsahi-agent/bootsahi-agent*.sh"
+	fail=1
+elif ! grep -q '\.partitions\[' "${AGENT_SOURCES[@]}"; then
+	echo "FAIL: none of ${AGENT_SOURCES[*]} reads stub_info.json's .partitions."
+	echo "      The reader moved, so this guard would check the wrong files."
+	fail=1
+elif grep -n "macos_device" "${AGENT_SOURCES[@]}"; then
 	echo "FAIL: bootsahi-agent references macos_device. That field is a macOS device"
 	echo "      name and does not identify anything under Linux."
 	fail=1
 else
-	echo "ok: the agent never reads macos_device"
+	echo "ok: the agent never reads macos_device (${AGENT_SOURCES[*]})"
 fi
 
 # ── 3. The terminal result contract (issue #25) ───────────────────────────
