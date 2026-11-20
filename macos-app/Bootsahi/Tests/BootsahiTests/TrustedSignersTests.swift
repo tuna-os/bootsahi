@@ -7,7 +7,7 @@ import XCTest
 @MainActor
 final class TrustedSignersTests: XCTestCase {
 
-    private let trustedIdentity = "https://github.com/tuna-os/.github/.github/workflows/image-build.yml@refs/heads/main"
+    private let trustedIdentity = "https://github.com/tuna-os/tunaOS/.github/workflows/reusable-build-image.yml@refs/heads/main"
     private let githubIssuer = "https://token.actions.githubusercontent.com"
     private let attackerIdentity = "https://github.com/someone-else/image/.github/workflows/build.yml@refs/heads/main"
 

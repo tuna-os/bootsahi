@@ -17,7 +17,7 @@ import XCTest
 @MainActor
 final class InstallFlowViewModelTests: XCTestCase {
 
-    private let identity = "https://github.com/tuna-os/.github/.github/workflows/image-build.yml@refs/heads/main"
+    private let identity = "https://github.com/tuna-os/tunaOS/.github/workflows/reusable-build-image.yml@refs/heads/main"
     private let issuer = "https://token.actions.githubusercontent.com"
 
     private func entry(_ imgref: String = "ghcr.io/tuna-os/bonito:gnome-asahi") -> CatalogEntry {

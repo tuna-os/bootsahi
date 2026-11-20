@@ -16,9 +16,14 @@ enum TrustedSigners {
         var cosignIssuer: String
     }
 
+    /// tunaOS's `Sign` job in `.github/workflows/reusable-build-image.yml`
+    /// signs with this identity (the certificate SAN on the bonito
+    /// gnome-asahi arm64 signature, 2026-11-17). The earlier
+    /// `tuna-os/.github/.../image-build.yml` value matched no published
+    /// signature, so every verify would have failed.
     static let all: [Signer] = [
         Signer(
-            cosignIdentity: "https://github.com/tuna-os/.github/.github/workflows/image-build.yml@refs/heads/main",
+            cosignIdentity: "https://github.com/tuna-os/tunaOS/.github/workflows/reusable-build-image.yml@refs/heads/main",
             cosignIssuer: "https://token.actions.githubusercontent.com"),
     ]
 
