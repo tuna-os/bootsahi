@@ -4,6 +4,13 @@ name: Build bootsahi bootstrap image
 # every payload CI produced could boot but could not install. This builds the
 # real bootstrap and publishes it for the payload job to consume.
 #
+# The handoff is immutable (#97, #122, #93). The base image is verified and
+# pinned by its arm64 manifest digest before the build. A main build pushes a
+# commit tag (sha-<commit>), never a moving tag, signs the pushed digest with
+# this workflow's keyless identity, and prints the digest-pinned reference that
+# build-payload.yml requires. build-payload.yml verifies that signature before
+# it runs the image --privileged.
+#
 # arm64 runner because the image is aarch64 and fisherman is compiled natively
 # for it — no qemu-user emulation in the build path.
 
@@ -11,15 +18,11 @@ on:
   workflow_dispatch:
     inputs:
       base_image:
-        description: "Base image to derive the bootstrap from"
+        description: "Base image to derive the bootstrap from (must verify against the tunaOS signer)"
         default: "ghcr.io/tuna-os/bonito:gnome-asahi"
         type: string
-      tag:
-        description: "Tag to publish"
-        default: "ghcr.io/tuna-os/bootsahi-bootstrap:latest"
-        type: string
       push:
-        description: "Push to GHCR (off = build and verify only)"
+        description: "Push and sign (main only; off = build and verify only)"
         default: false
         type: boolean
   push:
@@ -27,20 +30,29 @@ on:
     paths:
       - "bootstrap-image/**"
       - "scripts/build-bootstrap-image.sh"
+      - "scripts/install-cosign.sh"
+      - "scripts/verify-image.sh"
       - "components/**"
 
 permissions:
   contents: read
-  packages: write
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
+env:
+  BOOTSTRAP_REPO: ghcr.io/tuna-os/bootsahi-bootstrap
+  LOCAL_TAG: localhost/bootsahi-bootstrap:ci
+
 jobs:
   build:
     runs-on: ubuntu-26.04-arm
     timeout-minutes: 60
+    permissions:
+      contents: read
+      packages: write
+      id-token: write # keyless cosign signing of the pushed digest
     steps:
       - uses: actions/checkout@v7.0.1
         with:
@@ -49,25 +61,42 @@ jobs:
         with:
           go-version: "1.27"
 
+      - name: Install cosign (the version the bootstrap ships)
+        run: |
+          ./scripts/install-cosign.sh "$RUNNER_TEMP/bin"
+          echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
+
       - name: Login to GHCR
-        run: echo "${{ github.token }}" | podman login ghcr.io -u "${GITHUB_ACTOR}" --password-stdin
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          echo "$GH_TOKEN" | podman login ghcr.io -u "${GITHUB_ACTOR}" --password-stdin
+          echo "$GH_TOKEN" | cosign login ghcr.io -u "${GITHUB_ACTOR}" --password-stdin
+
+      - name: Verify and pin the base image
+        # Dispatch inputs travel via env, never interpolated into the script
+        # body (bootc-installer-asahi#75). The base must carry a signature from
+        # the signer the agent trusts; the build then uses that exact digest.
+        id: base
+        env:
+          BASE_REF: ${{ inputs.base_image || 'ghcr.io/tuna-os/bonito:gnome-asahi' }}
+        run: |
+          identity=$(jq -r '.signers[0].cosignIdentity' components/bootsahi-agent/trusted-signers.json)
+          issuer=$(jq -r '.signers[0].cosignIssuer' components/bootsahi-agent/trusted-signers.json)
+          pinned=$(./scripts/verify-image.sh "$BASE_REF" "$identity" "$issuer")
+          echo "pinned=$pinned" >> "$GITHUB_OUTPUT"
 
       - name: Build bootstrap image
-        # Dispatch inputs travel via env, never interpolated into the script
-        # body (bootc-installer-asahi#75).
         env:
-          BASE_IMAGE: ${{ inputs.base_image || 'ghcr.io/tuna-os/bonito:gnome-asahi' }}
-          BOOTSTRAP_TAG: ${{ inputs.tag || 'ghcr.io/tuna-os/bootsahi-bootstrap:latest' }}
-        run: ./scripts/build-bootstrap-image.sh "$BOOTSTRAP_TAG"
+          BASE_IMAGE: ${{ steps.base.outputs.pinned }}
+        run: ./scripts/build-bootstrap-image.sh "$LOCAL_TAG"
 
       # Verify the contract INSIDE the image before publishing, so a broken
       # bootstrap never becomes a payload. Cheaper and clearer than discovering
       # it later from a payload verifier's mounted rootfs.
       - name: Verify the bootstrap contract
-        env:
-          BOOTSTRAP_TAG: ${{ inputs.tag || 'ghcr.io/tuna-os/bootsahi-bootstrap:latest' }}
         run: |
-          TAG="$BOOTSTRAP_TAG"
+          TAG="$LOCAL_TAG"
           fail=0
           check() { # description test-command...
             if podman run --rm --entrypoint /bin/sh "$TAG" -c "$2" >/dev/null 2>&1; then
@@ -103,8 +132,36 @@ jobs:
             -c 'cp /t/test-agent.sh /t/test-agent-device.sh /tmp/ && sed -i -e "s#\$HERE/bootsahi-agent.sh#/usr/libexec/bootsahi-agent#" -e "s#\$HERE/bootsahi-agent-recipe.sh#/usr/libexec/bootsahi-agent-recipe.sh#" /tmp/test-agent.sh && sed -i "s#\$HERE/bootsahi-agent-device.sh#/usr/libexec/bootsahi-agent-device.sh#" /tmp/test-agent-device.sh && bash /tmp/test-agent.sh' || fail=1
           [ "$fail" -eq 0 ]
 
-      - name: Push
-        if: ${{ github.event_name == 'push' || inputs.push }}
+      - name: Push, sign and record the digest
+        # Only main publishes: build-payload.yml accepts only this workflow's
+        # refs/heads/main identity, so a signature from any other ref would be
+        # refused downstream anyway.
+        if: ${{ github.ref == 'refs/heads/main' && (github.event_name == 'push' || inputs.push) }}
         env:
-          BOOTSTRAP_TAG: ${{ inputs.tag || 'ghcr.io/tuna-os/bootsahi-bootstrap:latest' }}
-        run: podman push "$BOOTSTRAP_TAG"
+          COSIGN_YES: "true"
+          BASE_PINNED: ${{ steps.base.outputs.pinned }}
+        run: |
+          set -euo pipefail
+          podman push --digestfile "$RUNNER_TEMP/digest" "$LOCAL_TAG" "$BOOTSTRAP_REPO:sha-$GITHUB_SHA"
+          digest=$(cat "$RUNNER_TEMP/digest")
+          [[ "$digest" =~ ^sha256:[0-9a-f]{64}$ ]] || { echo "::error::podman push reported no digest"; exit 1; }
+          ref="$BOOTSTRAP_REPO@$digest"
+          cosign sign "$ref"
+          # Prove the signature verifies with the exact identity the payload
+          # job will demand, before anyone is told to use this digest.
+          ./scripts/verify-image.sh "$ref" \
+            "https://github.com/$GITHUB_REPOSITORY/.github/workflows/build-bootstrap-image.yml@refs/heads/main" \
+            "https://token.actions.githubusercontent.com"
+          {
+            echo "### Bootstrap published"
+            echo
+            echo "Base: \`$BASE_PINNED\`"
+            echo
+            echo "Signed bootstrap: \`$ref\` (tag \`sha-$GITHUB_SHA\`)"
+            echo
+            echo "Package it with:"
+            echo
+            echo "\`\`\`"
+            echo "gh workflow run build-payload.yml -f image=$ref"
+            echo "\`\`\`"
+          } >> "$GITHUB_STEP_SUMMARY"
