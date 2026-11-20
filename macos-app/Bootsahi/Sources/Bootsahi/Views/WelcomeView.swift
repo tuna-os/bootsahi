@@ -3,11 +3,9 @@ import SwiftUI
 struct WelcomeView: View {
     @EnvironmentObject var flow: InstallFlowViewModel
     private let hardware = HardwareGate.current()
-
-    private var hardwareUnsupported: Bool {
-        if case .unsupported = hardware { return true }
-        return false
-    }
+    /// The user's acknowledgement of this model's caution text. Continue stays
+    /// disabled until it is set, and is never enabled on an unlisted model.
+    @State private var cautionAcknowledged = false
 
     /// What the user is agreeing to, said plainly and up front.
     ///
@@ -64,7 +62,8 @@ struct WelcomeView: View {
                     .accessibilityElement(children: .combine)
                 }
 
-                if case .unsupported(let model, let reason) = hardware {
+                switch hardware {
+                case .unsupported(let model, let reason):
                     Label {
                         Text("Model \(model): \(reason)")
                     } icon: {
@@ -75,6 +74,20 @@ struct WelcomeView: View {
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
                     .accessibilityElement(children: .combine)
+                case .supported(let entry):
+                    VStack(alignment: .leading, spacing: 6) {
+                        Label {
+                            Text("\(entry.name): \(entry.caution)")
+                        } icon: {
+                            Image(systemName: "exclamationmark.triangle")
+                                .foregroundStyle(.orange)
+                        }
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                        Toggle("I have read this and want to continue", isOn: $cautionAcknowledged)
+                    }
+                    .accessibilityElement(children: .contain)
                 }
             }
             .frame(maxWidth: 520, alignment: .leading)
@@ -86,7 +99,7 @@ struct WelcomeView: View {
                 flow.advanceToCatalog()
             }
             .primaryAction()
-            .disabled(hardwareUnsupported)
+            .disabled(!HardwareGate.canContinue(hardware, acknowledged: cautionAcknowledged))
         }
     }
 }

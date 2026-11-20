@@ -13,7 +13,10 @@ let package = Package(
         .executableTarget(
             name: "Bootsahi",
             path: "Sources/Bootsahi",
-            resources: [.copy("Resources/catalog.json")]
+            resources: [
+                .copy("Resources/catalog.json"),
+                .copy("Resources/supported-models.json"),
+            ]
         ),
         .testTarget(
             name: "BootsahiTests",

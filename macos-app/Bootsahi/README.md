@@ -68,9 +68,11 @@ by `swift build`/`swift test` in CI.
   `asahi-installer/src/main.py`. The Python runtime and notarized DMG still
   need a release packaging decision; the app refuses clearly when neither
   backend location exists.
-- **SoC-generation gate** (M1/M2 only, refuse M3+ politely) —
-  `HardwareGate` checks the Apple Silicon capability and refuses known M3/M4
-  model families before the first destructive action.
+- **SoC-generation gate** (M1/M2 only) — `HardwareGate` accepts only the
+  `hw.model` values listed in `Resources/supported-models.json` (the M1 and M2
+  rows of Asahi's device list) and refuses every other model, including
+  unknown and future ones. Each listed model has a caution text that the user
+  must acknowledge before Continue is enabled.
 - **Wi-Fi SSID prefill from the current macOS network** (DESIGN.md D4,
   `SystemConfiguration`) — `OptionsView.swift` has a plain manual field.
 - **Real disk-space slider bytes**, notarization, and the recoveryOS
