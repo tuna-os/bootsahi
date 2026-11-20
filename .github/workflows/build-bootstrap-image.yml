@@ -82,9 +82,11 @@ jobs:
           check "fisherman"                   'command -v fisherman'
           check "jq"                          'command -v jq'
           check "cosign"                      'command -v cosign'
+          check "skopeo"                      'command -v skopeo'
           check "nmcli"                       'command -v nmcli'
           check "blkid"                       'command -v blkid'
           check "bootstrap-release marker"    '[ -f /usr/share/bootsahi/bootstrap-release ]'
+          check "trusted signers list (#193)" '[ -s /usr/share/bootsahi/trusted-signers.json ]'
           # The agent's own selftest, run against the agent AS SHIPPED rather
           # than against the copy in the repo — the whole point is to catch a
           # staging or permissions mistake that only exists inside the image.

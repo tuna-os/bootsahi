@@ -64,6 +64,7 @@ install -m 0755 "$HERE/components/asahi-bootbin-sync/asahi-bootbin-sync.sh" "$CT
 install -m 0644 "$HERE/components/bootsahi-agent/bootsahi-agent.service" "$CTX/bootsahi-agent.service"
 install -m 0644 "$HERE/components/asahi-bootbin-sync/asahi-bootbin-sync.service" "$CTX/asahi-bootbin-sync.service"
 install -m 0644 "$HERE/components/bootsahi-agent/install-config.schema.json" "$CTX/install-config.schema.json"
+install -m 0644 "$HERE/components/bootsahi-agent/trusted-signers.json" "$CTX/trusted-signers.json"
 
 # ── fisherman ───────────────────────────────────────────────────────────────
 if [ "${SKIP_FISHERMAN_BUILD:-0}" = "1" ] && [ -f "$CTX/fisherman" ]; then

@@ -16,14 +16,18 @@
 # N>0) and a harnessRef a reviewer can open. Flipping the catalog boolean
 # alone, with nothing else in the diff, now fails this check.
 #
+# It also checks that every entry's cosign signer is one the bootstrap ships
+# in trusted-signers.json, since the agent refuses any other.
+#
 # Usage: ./scripts/validate-catalog.sh
 set -euo pipefail
 
 HERE=$(cd "$(dirname "$0")/.." && pwd)
 CATALOG="$HERE/macos-app/Bootsahi/Sources/Bootsahi/Resources/catalog.json"
 RECORDS="$HERE/docs/harness-results.json"
+SIGNERS="$HERE/components/bootsahi-agent/trusted-signers.json"
 
-for f in "$CATALOG" "$RECORDS"; do
+for f in "$CATALOG" "$RECORDS" "$SIGNERS"; do
 	[ -f "$f" ] || { echo "ERROR: missing $f" >&2; exit 1; }
 	jq empty "$f" || { echo "ERROR: $f is not valid JSON" >&2; exit 1; }
 done
@@ -64,5 +68,19 @@ while IFS=$'\t' read -r variant desktop stream imgref; do
 		fail=1
 	fi
 done < <(jq -r '.entries[] | select(.verified == true) | [.variant, .desktop, .stream, .imgref] | @tsv' "$CATALOG")
+
+# bootsahi-agent installs only images signed by a signer the bootstrap ships.
+# An entry naming any other signer would be offered by the app and then refused
+# at first boot, after the disk has been repartitioned.
+echo "==> Checking every catalog.json signer against trusted-signers.json"
+while IFS=$'\t' read -r imgref identity issuer; do
+	if jq -e --arg id "$identity" --arg iss "$issuer" \
+		'any(.signers[]?; .cosignIdentity == $id and .cosignIssuer == $iss)' "$SIGNERS" >/dev/null; then
+		echo "ok: $imgref signer is trusted by the bootstrap"
+	else
+		echo "FAIL: $imgref names signer '$identity' (issuer '$issuer'), which is not in components/bootsahi-agent/trusted-signers.json"
+		fail=1
+	fi
+done < <(jq -r '.entries[] | [.imgref, .cosignIdentity, .cosignIssuer] | @tsv' "$CATALOG")
 
 exit "$fail"

@@ -74,7 +74,9 @@ final class InstallFlowViewModel: ObservableObject {
     func apply(_ directive: E2EDrive.Directive) {
         switch directive {
         case .selectCatalogEntry(let imgref):
-            selectedEntry = catalog?.entries.first { $0.imgref == imgref }
+            // Same filter as CatalogView: drive mode must not reach an entry
+            // a user could not click.
+            selectedEntry = catalog?.entries.first { $0.imgref == imgref && $0.isOfferable }
         case .setHostname(let value):
             config.hostname = value
         case .setUser(let username, let fullname, let password):
@@ -158,7 +160,10 @@ final class InstallFlowViewModel: ObservableObject {
     }
 
     func advanceToOptions() {
-        guard step == .catalog, let entry = selectedEntry else { return }
+        // CatalogView already hides entries that are not offerable; this guard
+        // keeps the config writer from ever naming a signer the compiled-in
+        // policy (and so the bootstrap agent) does not trust (#193).
+        guard step == .catalog, let entry = selectedEntry, entry.isOfferable else { return }
         config.targetImgref = entry.imgref
         config.cosignIdentity = entry.cosignIdentity
         config.cosignIssuer = entry.cosignIssuer

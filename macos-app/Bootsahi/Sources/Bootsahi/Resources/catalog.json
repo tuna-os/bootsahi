@@ -6,7 +6,7 @@
       "desktop": "gnome",
       "stream": "stable",
       "imgref": "ghcr.io/tuna-os/bonito:gnome-asahi",
-      "cosignIdentity": "https://github.com/tuna-os/.github/.github/workflows/image-build.yml@refs/heads/main",
+      "cosignIdentity": "https://github.com/tuna-os/tunaOS/.github/workflows/reusable-build-image.yml@refs/heads/main",
       "cosignIssuer": "https://token.actions.githubusercontent.com",
       "description": "Bonito with GNOME, Asahi build.",
       "verified": true
@@ -16,7 +16,7 @@
       "desktop": "gnome",
       "stream": "stable",
       "imgref": "ghcr.io/tuna-os/grouper:gnome-asahi",
-      "cosignIdentity": "https://github.com/tuna-os/.github/.github/workflows/image-build.yml@refs/heads/main",
+      "cosignIdentity": "https://github.com/tuna-os/tunaOS/.github/workflows/reusable-build-image.yml@refs/heads/main",
       "cosignIssuer": "https://token.actions.githubusercontent.com",
       "description": "Grouper with GNOME, Asahi build.",
       "verified": true

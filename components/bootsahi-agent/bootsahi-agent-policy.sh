@@ -156,6 +156,88 @@ connect_wifi() {
     unset psk
 }
 
+# find_trusted_signers locates trusted-signers.json, the list of signers this
+# bootstrap accepts. Same lookup order as the schema: production installs it to
+# /usr/share/bootsahi/; dev/test checks BOOTSAHI_TRUSTED_SIGNERS_PATH or
+# AGENT_LIB_DIR.
+find_trusted_signers() {
+    if [ -n "${BOOTSAHI_TRUSTED_SIGNERS_PATH:-}" ]; then
+        [ -f "$BOOTSAHI_TRUSTED_SIGNERS_PATH" ] && echo "$BOOTSAHI_TRUSTED_SIGNERS_PATH"
+        return 0
+    fi
+    if [ -f "/usr/share/bootsahi/trusted-signers.json" ]; then
+        echo "/usr/share/bootsahi/trusted-signers.json"
+        return 0
+    fi
+    if [ -f "$AGENT_LIB_DIR/trusted-signers.json" ]; then
+        echo "$AGENT_LIB_DIR/trusted-signers.json"
+        return 0
+    fi
+    return 0
+}
+
+# signer_is_trusted reports whether an (identity, issuer) pair is one this
+# bootstrap ships as trusted. Exact string match on both, as a pair.
+#
+# The config names the signer it expects, but the config lives on the ESP next
+# to the image reference it is meant to constrain. Whoever can write one can
+# write the other, and a keyless signature from one's own workflow costs
+# nothing. So the config's pair only selects among signers the bootstrap
+# already trusts; it never introduces one.
+#
+# Fails closed: a missing or unparsable list is a refusal, not a pass. The list
+# ships in the bootstrap image, so its absence is a packaging defect.
+signer_is_trusted() {
+    local identity="$1" issuer="$2" signers_file
+    signers_file=$(find_trusted_signers)
+    if [ -z "$signers_file" ]; then
+        log "trusted-signers.json not found; cannot tell whether the config's signer is one this bootstrap accepts"
+        return 1
+    fi
+    jq -e --arg id "$identity" --arg iss "$issuer" '
+        any(.signers[]?; .cosignIdentity == $id and .cosignIssuer == $iss)
+    ' "$signers_file" >/dev/null 2>>"$LOG_FILE"
+}
+
+# resolve_platform_digest prints the digest of the linux/arm64 image manifest
+# behind imgref, the one manifest this machine can run.
+#
+# tunaOS signs each platform manifest, not the multi-arch index its tags point
+# at, so `cosign verify <tag>` finds no signature. Verifying the arm64 manifest
+# is also the tighter check: those are the bytes bootc pulls on this machine.
+#
+# An index must list exactly one linux/arm64 manifest; none or several is a
+# refusal. A single-arch manifest is its own digest: the SHA-256 of the exact
+# bytes the registry served, hashed from a file because command substitution
+# would strip a trailing newline and change the hash.
+resolve_platform_digest() {
+    local imgref="$1" raw media digest
+    raw="$RUN_DIR/target-manifest.json"
+    if ! skopeo inspect --raw "docker://$imgref" >"$raw" 2>>"$LOG_FILE"; then
+        log "could not read the manifest of $imgref from the registry"
+        return 1
+    fi
+    media=$(jq -r '.mediaType // empty' "$raw" 2>>"$LOG_FILE")
+    case "$media" in
+        application/vnd.oci.image.index.v1+json | application/vnd.docker.distribution.manifest.list.v2+json)
+            digest=$(jq -r '[.manifests[]? | select(.platform.os == "linux" and .platform.architecture == "arm64")]
+                | if length == 1 then .[0].digest else empty end' "$raw" 2>>"$LOG_FILE")
+            ;;
+        application/vnd.oci.image.manifest.v1+json | application/vnd.docker.distribution.manifest.v2+json)
+            digest="sha256:$(sha256sum "$raw" | cut -d' ' -f1)"
+            ;;
+        *)
+            log "$imgref has an unknown manifest type '${media:-none}'"
+            return 1
+            ;;
+    esac
+    if ! [[ "$digest" =~ ^sha256:[0-9a-f]{64}$ ]]; then
+        log "$imgref does not list exactly one linux/arm64 manifest; refusing"
+        return 1
+    fi
+    printf '%s\n' "$digest"
+}
+
 # verify_signature FAILS CLOSED and prints the digest-pinned reference that the
 # install must actually deploy. Callers use that output, never the tag.
 #
@@ -170,14 +252,19 @@ connect_wifi() {
 #
 #  1. Fail closed. Missing identity OR issuer is a refusal, not a skip. Both
 #     are required: an identity without an issuer would accept a certificate
-#     for the same identity string from ANY OIDC provider.
+#     for the same identity string from ANY OIDC provider. The pair must also
+#     be one the bootstrap ships in trusted-signers.json (see
+#     signer_is_trusted): a policy the config can rewrite is no more a policy
+#     than one it can omit.
 #  2. Verify and deploy the SAME BYTES. Verifying a tag and then handing that
 #     tag to the installer is a TOCTOU race — the tag can move between the two,
-#     so what was verified is not necessarily what lands. cosign reports the
-#     digest it actually verified, so we pin the deploy to that digest.
+#     so what was verified is not necessarily what lands. The agent resolves
+#     the tag once to the linux/arm64 manifest digest (resolve_platform_digest),
+#     has cosign verify THAT digest, checks cosign reports the same digest, and
+#     deploys it.
 verify_signature() {
     local cfg="$1" imgref="$2"
-    local identity issuer out digest
+    local identity issuer out digest platform_digest pinned
 
     identity=$(jq -r '.cosignIdentity // empty' "$cfg")
     issuer=$(jq -r '.cosignIssuer // empty' "$cfg")
@@ -201,34 +288,55 @@ verify_signature() {
         log "(dev/test override: BOOTSAHI_ALLOW_UNVERIFIED=1, which taints the run)"
         return 1
     fi
+    if ! signer_is_trusted "$identity" "$issuer"; then
+        log "install-config.json names a signer this bootstrap does not trust:"
+        log "  cosignIdentity=$identity"
+        log "  cosignIssuer=$issuer"
+        log "refusing: a signature only proves authenticity against a signer the bootstrap ships"
+        return 1
+    fi
     if ! command -v cosign >/dev/null 2>&1; then
         log "signature policy is set but cosign is missing from the bootstrap image; refusing"
         return 1
     fi
+    if ! command -v skopeo >/dev/null 2>&1; then
+        log "skopeo is missing from the bootstrap image, so the arm64 manifest cannot be resolved; refusing"
+        return 1
+    fi
 
-    log "verifying cosign signature for $imgref"
+    if ! platform_digest=$(resolve_platform_digest "$imgref"); then
+        log "could not resolve $imgref to one linux/arm64 manifest; refusing"
+        return 1
+    fi
+    pinned="${imgref%%@*}@$platform_digest"
+
+    log "verifying cosign signature for $pinned (linux/arm64 manifest of $imgref)"
     if ! out=$(cosign verify \
         --certificate-identity "$identity" \
         --certificate-oidc-issuer "$issuer" \
         --output json \
-        "$imgref" 2>>"$LOG_FILE"); then
-        log "cosign verification FAILED for $imgref"
+        "$pinned" 2>>"$LOG_FILE"); then
+        log "cosign verification FAILED for $pinned"
         return 1
     fi
     printf '%s' "$out" >>"$LOG_FILE"
 
-    # Pin to what cosign actually verified. If we cannot extract that digest we
-    # refuse rather than falling back to the tag — a fallback here would
-    # silently reintroduce exactly the race this exists to close.
+    # Deploy only what cosign reports it verified, and only if that is the
+    # digest we asked about. Refuse rather than fall back to the tag — a
+    # fallback here would silently reintroduce the race this exists to close.
     digest=$(printf '%s' "$out" | jq -r '.[0].critical.image."docker-manifest-digest" // empty' 2>/dev/null)
     case "$digest" in
         sha256:*) ;;
         *)
-            log "cosign verified $imgref but no manifest digest could be read from its output;"
+            log "cosign verified $pinned but no manifest digest could be read from its output;"
             log "refusing rather than deploying a tag that may have moved since verification"
             return 1
             ;;
     esac
+    if [ "$digest" != "$platform_digest" ]; then
+        log "cosign verified $digest, not the resolved arm64 manifest $platform_digest; refusing"
+        return 1
+    fi
 
     log "verified digest $digest — deploying by digest, not by tag"
     printf '%s@%s\n' "${imgref%%@*}" "$digest"

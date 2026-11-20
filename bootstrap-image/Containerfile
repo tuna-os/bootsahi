@@ -23,11 +23,13 @@ ARG FISHERMAN_REVISION=unknown
 COPY fisherman /usr/bin/fisherman
 
 # Tools the agent shells out to. jq parses install-config.json/stub_info.json;
-# cosign verifies the target image BEFORE deploying it; util-linux/gdisk provide
-# blkid and partition handling; NetworkManager provides nmcli for the Wi-Fi
-# handoff. Missing any of these turns into a first-boot failure on hardware,
-# which is the most expensive place to discover a missing package.
-RUN dnf install -y jq util-linux gdisk NetworkManager curl && \
+# cosign verifies the target image BEFORE deploying it; skopeo resolves the
+# target tag to its linux/arm64 manifest digest, which is what cosign verifies;
+# util-linux/gdisk provide blkid and partition handling; NetworkManager provides
+# nmcli for the Wi-Fi handoff. Missing any of these turns into a first-boot
+# failure on hardware, which is the most expensive place to discover a missing
+# package.
+RUN dnf install -y jq util-linux gdisk NetworkManager curl skopeo && \
     dnf clean all
 
 # cosign is NOT in Fedora's repositories (checked), so it is fetched as a
@@ -58,6 +60,7 @@ COPY asahi-bootbin-sync /usr/libexec/asahi-bootbin-sync
 COPY bootsahi-agent.service /usr/lib/systemd/system/bootsahi-agent.service
 COPY asahi-bootbin-sync.service /usr/lib/systemd/system/asahi-bootbin-sync.service
 COPY install-config.schema.json /usr/share/bootsahi/install-config.schema.json
+COPY trusted-signers.json /usr/share/bootsahi/trusted-signers.json
 
 RUN chmod 0755 /usr/libexec/bootsahi-agent /usr/libexec/asahi-bootbin-sync /usr/bin/fisherman && \
     chmod 0644 /usr/libexec/bootsahi-agent-recipe.sh /usr/libexec/bootsahi-agent-policy.sh /usr/libexec/bootsahi-agent-device.sh && \

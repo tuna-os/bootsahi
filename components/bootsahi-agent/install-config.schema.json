@@ -94,7 +94,7 @@
     },
     "cosignIdentity": {
       "type": "string",
-      "description": "REQUIRED. Expected cosign certificate identity for targetImgref. bootsahi-agent verifies the image signature before deploying and refuses to install if this is absent -- an omittable policy is not a policy, and this file lives on a world-readable vfat ESP (issue #24). The agent deploys the digest cosign reports, not the tag, so the bytes verified are the bytes installed."
+      "description": "REQUIRED. Expected cosign certificate identity for targetImgref. bootsahi-agent verifies the image signature before deploying and refuses to install if this is absent -- an omittable policy is not a policy, and this file lives on a world-readable vfat ESP (issue #24). Together with cosignIssuer it must match an entry in the trusted-signers.json the bootstrap ships; a signer named only here is refused. The agent deploys the digest cosign reports, not the tag, so the bytes verified are the bytes installed."
     },
     "cosignIssuer": {
       "type": "string",

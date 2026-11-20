@@ -80,20 +80,53 @@ chmod +x "$STUBS"/fisherman-*
 # array whose [0].critical.image."docker-manifest-digest" is the digest cosign
 # actually verified. The agent pins the deploy to that digest, so getting this
 # shape right is the difference between testing the contract and testing a
-# mock of our own invention.
+# mock of our own invention. It reports the digest it was asked about, and
+# refuses a reference without one: the agent must verify the resolved arm64
+# manifest digest, never the tag (tunaOS signs platform manifests, not the
+# index a tag points at).
+#
+# skopeo stubs serve the manifest the agent resolves the tag through. The
+# default one is a multi-arch index whose linux/arm64 entry is COSIGN_OK_DIGEST.
 COSIGN_OK_DIGEST="sha256:1111111111111111111111111111111111111111111111111111111111111111"
-mkdir -p "$STUBS/bin-ok" "$STUBS/bin-fail" "$STUBS/bin-nodigest"
+AMD64_DIGEST="sha256:2222222222222222222222222222222222222222222222222222222222222222"
+mkdir -p "$STUBS/bin-ok" "$STUBS/bin-fail" "$STUBS/bin-nodigest" "$STUBS/bin-mismatch" \
+	"$STUBS/bin-noarm" "$STUBS/bin-skopeofail" "$STUBS/bin-single"
+jq -n --arg arm "$COSIGN_OK_DIGEST" --arg amd "$AMD64_DIGEST" '{
+  schemaVersion: 2, mediaType: "application/vnd.oci.image.index.v1+json",
+  manifests: [
+    {mediaType: "application/vnd.oci.image.manifest.v1+json", digest: $amd, size: 1,
+     platform: {os: "linux", architecture: "amd64"}},
+    {mediaType: "application/vnd.oci.image.manifest.v1+json", digest: $arm, size: 1,
+     platform: {os: "linux", architecture: "arm64"}}]}' >"$STUBS/index.json"
+jq 'del(.manifests[1])' "$STUBS/index.json" >"$STUBS/index-noarm.json"
+printf '{"schemaVersion":2,"mediaType":"application/vnd.oci.image.manifest.v1+json","layers":[]}\n' \
+	>"$STUBS/single.json"
+SINGLE_DIGEST="sha256:$(sha256sum "$STUBS/single.json" | cut -d' ' -f1)"
+skopeo_stub() { # dir manifest-file
+	printf '#!/bin/sh\n[ "$1" = inspect ] && [ "$2" = --raw ] || exit 1\ncat "%s"\n' "$2" >"$1/skopeo"
+}
 cat >"$STUBS/bin-ok/cosign" <<EOF
 #!/bin/sh
 [ "\$1" = "verify" ] || exit 1
-printf '[{"critical":{"image":{"docker-manifest-digest":"$COSIGN_OK_DIGEST"}}}]\n'
+for a in "\$@"; do ref="\$a"; done
+echo "\$ref" >>"$STUBS/cosign-refs.log"
+case "\$ref" in *@sha256:*) ;; *) echo "error: no signatures found" >&2; exit 1 ;; esac
+printf '[{"critical":{"image":{"docker-manifest-digest":"%s"}}}]\n' "\${ref#*@}"
 EOF
+for d in bin-ok bin-fail bin-nodigest bin-mismatch; do skopeo_stub "$STUBS/$d" "$STUBS/index.json"; done
+for d in bin-noarm bin-skopeofail bin-single; do cp "$STUBS/bin-ok/cosign" "$STUBS/$d/cosign"; done
+skopeo_stub "$STUBS/bin-noarm" "$STUBS/index-noarm.json"
+skopeo_stub "$STUBS/bin-single" "$STUBS/single.json"
+printf '#!/bin/sh\necho "error: manifest unknown" >&2\nexit 1\n' >"$STUBS/bin-skopeofail/skopeo"
 # Verification itself fails — a wrong signer or wrong issuer looks like this.
 printf '#!/bin/sh\necho "error: no matching signatures" >&2\nexit 1\n' >"$STUBS/bin-fail/cosign"
 # Verification succeeds but the output carries no digest. The agent must refuse
 # rather than fall back to the tag, or the verify/deploy race reopens silently.
 printf '#!/bin/sh\nprintf "[{}]\\n"\n' >"$STUBS/bin-nodigest/cosign"
-chmod +x "$STUBS"/bin-*/cosign
+# Verification succeeds for a digest other than the one the agent resolved.
+printf '#!/bin/sh\nprintf "[{\\"critical\\":{\\"image\\":{\\"docker-manifest-digest\\":\\"%s\\"}}}]\\n"\n' \
+	"$AMD64_DIGEST" >"$STUBS/bin-mismatch/cosign"
+chmod +x "$STUBS"/bin-*/cosign "$STUBS"/bin-*/skopeo
 
 # Sanity-check the stubs by RUNNING them, not with `[ -x ]`. The whole bug
 # being fixed here was a stand-in that couldn't execute, so verify the thing
@@ -139,6 +172,7 @@ run_agent() { # config_path fisherman_bin [extra_env...]
 	env BOOTSAHI_RUN_DIR="$rundir" BOOTSAHI_NO_REBOOT=1 BOOTSAHI_CONFIG_PATH="$usedcfg" \
 		BOOTSAHI_SKIP_HW_CHECK=1 \
 		BOOTSAHI_ALLOW_CONFIG_DEVICES=1 \
+		BOOTSAHI_TRUSTED_SIGNERS_PATH="$WORK/trusted-signers.json" \
 		PATH="$STUBS/bin-ok:$PATH" \
 		BOOTSAHI_FISHERMAN_BIN="$fbin" "${@:3}" bash "$AGENT" >"$rundir/stdout" 2>&1
 	echo $? >"$rundir/exit"
@@ -159,6 +193,22 @@ cat >"$WORK/good.json" <<'EOF'
   "cosignIssuer": "https://example.test/oidc"
 }
 EOF
+
+# The signers this suite's bootstrap "ships". The fixtures' example.test signer
+# is listed here rather than in the real trusted-signers.json, so the shipped
+# list never has to carry a test identity.
+cat >"$WORK/trusted-signers.json" <<'EOF'
+{"signers": [{"cosignIdentity": "https://example.test/signer", "cosignIssuer": "https://example.test/oidc"}]}
+EOF
+
+# A signer the bootstrap does not ship: someone's own workflow, validly signed.
+jq '.targetImgref = "ghcr.io/someone-else/image:latest"
+    | .cosignIdentity = "https://github.com/someone-else/image/.github/workflows/build.yml@refs/heads/main"
+    | .cosignIssuer = "https://token.actions.githubusercontent.com"' \
+	"$WORK/good.json" >"$WORK/untrusted-signer.json"
+
+# A trusted identity paired with a different issuer. Trust is in the pair.
+jq '.cosignIssuer = "https://issuer.example.test/other"' "$WORK/good.json" >"$WORK/untrusted-issuer.json"
 
 # Same config with NO signature policy. Since #24 this must be REFUSED rather
 # than installed, so it is a fixture for the refusal test, not the happy path.
@@ -370,6 +420,30 @@ echo "==> identity WITHOUT issuer -> refuse (half a policy is no policy)"
 r=$(run_agent "$WORK/half-policy.json" "$STUBS/fisherman-ok")
 check_exit "exit code (identity without issuer -> refuse)" 1 "$r"
 
+# The config sits on the ESP beside the image reference, so a signer it names
+# proves nothing by itself: anyone can sign their own image with their own
+# workflow. The cosign stub SUCCEEDS in these three cases, so only the
+# trusted-signers check can produce the refusal.
+echo "==> signer not shipped in trusted-signers.json -> refuse, even though cosign would verify"
+r=$(run_agent "$WORK/untrusted-signer.json" "$STUBS/fisherman-ok")
+check_exit "exit code (untrusted signer -> refuse)" 1 "$r"
+check "no recipe generated for an untrusted signer" "" \
+	"$(ls "$r/recipe.json" 2>/dev/null || true)"
+if grep -q "verifying cosign signature" "$r/install.log"; then
+	echo "FAIL: cosign was consulted for a signer the bootstrap does not trust"
+	fail=1
+else
+	echo "ok: untrusted signer refused before cosign ran"
+fi
+
+echo "==> trusted identity with a different issuer -> refuse (the pair is what is trusted)"
+r=$(run_agent "$WORK/untrusted-issuer.json" "$STUBS/fisherman-ok")
+check_exit "exit code (trusted identity, other issuer -> refuse)" 1 "$r"
+
+echo "==> trusted-signers.json missing -> refuse (fail closed, like the schema)"
+r=$(run_agent "$WORK/good.json" "$STUBS/fisherman-ok" BOOTSAHI_TRUSTED_SIGNERS_PATH="$WORK/no-such-signers.json")
+check_exit "exit code (no trusted-signers list -> refuse)" 1 "$r"
+
 echo "==> cosign verification FAILS (wrong signer / wrong issuer)"
 r=$(run_agent "$WORK/good.json" "$STUBS/fisherman-ok" PATH="$STUBS/bin-fail:$PATH")
 check_exit "exit code (cosign verify failed -> refuse)" 1 "$r"
@@ -377,6 +451,39 @@ check_exit "exit code (cosign verify failed -> refuse)" 1 "$r"
 echo "==> cosign succeeds but reports no digest -> refuse, never fall back to the tag"
 r=$(run_agent "$WORK/good.json" "$STUBS/fisherman-ok" PATH="$STUBS/bin-nodigest:$PATH")
 check_exit "exit code (verified but undigested -> refuse)" 1 "$r"
+
+# tunaOS signs per-platform manifests, not the index a tag points at, so the
+# agent resolves the tag to the linux/arm64 manifest and verifies that digest.
+echo "==> cosign is asked about the arm64 manifest digest, never the tag or the index"
+: >"$STUBS/cosign-refs.log"
+r=$(run_agent "$WORK/good.json" "$STUBS/fisherman-ok")
+check_exit "exit code (arm64 manifest verified -> install)" 0 "$r"
+check "cosign verified exactly the resolved arm64 digest" \
+	"ghcr.io/tuna-os/bonito:gnome-asahi@$COSIGN_OK_DIGEST" "$(cat "$STUBS/cosign-refs.log")"
+
+echo "==> index without a linux/arm64 manifest -> refuse"
+: >"$STUBS/cosign-refs.log"
+r=$(run_agent "$WORK/good.json" "$STUBS/fisherman-ok" PATH="$STUBS/bin-noarm:$PATH")
+check_exit "exit code (no arm64 manifest -> refuse)" 1 "$r"
+check "cosign not consulted when no arm64 manifest exists" "" "$(cat "$STUBS/cosign-refs.log")"
+
+echo "==> manifest cannot be read from the registry -> refuse"
+r=$(run_agent "$WORK/good.json" "$STUBS/fisherman-ok" PATH="$STUBS/bin-skopeofail:$PATH")
+check_exit "exit code (manifest unreadable -> refuse)" 1 "$r"
+
+echo "==> cosign reports a digest other than the resolved arm64 manifest -> refuse"
+r=$(run_agent "$WORK/good.json" "$STUBS/fisherman-ok" PATH="$STUBS/bin-mismatch:$PATH")
+check_exit "exit code (verified digest differs from resolved -> refuse)" 1 "$r"
+
+echo "==> single-arch manifest -> its own digest (hash of the served bytes) is verified and deployed"
+r=$(run_agent "$WORK/good.json" "$STUBS/fisherman-dump" PATH="$STUBS/bin-single:$PATH")
+check_exit "exit code (single-arch manifest -> install)" 0 "$r"
+if grep -q "\"image\": \".*@$SINGLE_DIGEST\"" "$r/install.log"; then
+	echo "ok: single-arch image deployed by the digest of its manifest bytes"
+else
+	echo "FAIL: single-arch image not deployed by $SINGLE_DIGEST"
+	fail=1
+fi
 
 echo "==> policy set but cosign missing from the image"
 # Runs with the ORIGINAL PATH (no stub dir), so this only means anything on a
