@@ -7,8 +7,10 @@ struct CatalogView: View {
         /// Only offer entries that have passed the Asahi golden-manifest
         /// harness (tuna-os/tunaOS#910). An unverified image may leave a Mac
         /// unbootable after the recoveryOS blessing step — the single worst
-        /// outcome this project can produce (#41).
-        let verified = (flow.catalog?.entries ?? []).filter { $0.verified }
+        /// outcome this project can produce (#41). An entry must also name a
+        /// signer the app trusts at compile time; the bootstrap agent refuses
+        /// any other at first boot, after the disk is repartitioned (#193).
+        let verified = (flow.catalog?.entries ?? []).filter { $0.isOfferable }
 
         return WizardPage(
             symbol: "shippingbox",
