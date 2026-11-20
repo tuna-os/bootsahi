@@ -133,10 +133,14 @@ if [ -f "$OSROOT/usr/share/bootsahi/bootstrap-release" ]; then
 	# Shipped is not enabled. An unenabled unit is a silent no-op on first boot,
 	# and #23 was exactly that failure mode by a different mechanism, so assert
 	# the wants symlink itself rather than the unit file's presence.
-	if ls "$OSROOT"/etc/systemd/system/multi-user.target.wants/bootsahi-agent.service \
-	      "$OSROOT"/usr/lib/systemd/system/multi-user.target.wants/bootsahi-agent.service \
-	      >/dev/null 2>&1; then
-		ok "agent unit ENABLED (wants symlink present)"
+	#
+	# The bootstrap enables its units under /usr (#105), which is part of the
+	# image and so of every deployment; require the link there. This used to
+	# be `ls <etc link> <usr link>`, and ls exits non-zero when ANY of its
+	# arguments is missing, so the check failed whenever the /etc link was
+	# absent, even with the /usr link present.
+	if [ -L "$OSROOT/usr/lib/systemd/system/multi-user.target.wants/bootsahi-agent.service" ]; then
+		ok "agent unit ENABLED (wants symlink in /usr/lib/systemd/system)"
 	else
 		bad "agent unit shipped but NOT enabled — it would never run on first boot"
 	fi
