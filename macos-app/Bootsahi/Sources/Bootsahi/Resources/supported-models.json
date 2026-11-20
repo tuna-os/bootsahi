@@ -1,0 +1,168 @@
+{
+  "source": "https://asahilinux.org/docs/hw/devices/device-list/",
+  "reviewed": "2026-11-20",
+  "note": "M1 and M2 Macs only. A model is refused unless it is listed here, and the user must acknowledge its caution before installing.",
+  "models": [
+    {
+      "model": "Macmini9,1",
+      "name": "Mac mini (M1, 2020)",
+      "product": "J274AP",
+      "soc": "T8103",
+      "caution": "Asahi Linux supports this Mac, but Bootsahi has not yet completed an install on real Apple hardware (tuna-os/bootsahi#160). Back up this Mac before you continue. Some hardware may not work under Linux; see https://asahilinux.org/docs/platform/feature-support/m1/ for this model."
+    },
+    {
+      "model": "MacBookPro17,1",
+      "name": "MacBook Pro (13-inch, M1, 2020)",
+      "product": "J293AP",
+      "soc": "T8103",
+      "caution": "Asahi Linux supports this Mac, but Bootsahi has not yet completed an install on real Apple hardware (tuna-os/bootsahi#160). Back up this Mac before you continue. Some hardware may not work under Linux; see https://asahilinux.org/docs/platform/feature-support/m1/ for this model."
+    },
+    {
+      "model": "MacBookAir10,1",
+      "name": "MacBook Air (M1, 2020)",
+      "product": "J313AP",
+      "soc": "T8103",
+      "caution": "Asahi Linux supports this Mac, but Bootsahi has not yet completed an install on real Apple hardware (tuna-os/bootsahi#160). Back up this Mac before you continue. Some hardware may not work under Linux; see https://asahilinux.org/docs/platform/feature-support/m1/ for this model."
+    },
+    {
+      "model": "iMac21,1",
+      "name": "iMac (24-inch (4-port), M1, 2021)",
+      "product": "J456AP",
+      "soc": "T8103",
+      "caution": "Asahi Linux supports this Mac, but Bootsahi has not yet completed an install on real Apple hardware (tuna-os/bootsahi#160). Back up this Mac before you continue. Some hardware may not work under Linux; see https://asahilinux.org/docs/platform/feature-support/m1/ for this model."
+    },
+    {
+      "model": "iMac21,2",
+      "name": "iMac (24-inch (2-port), M1, 2021)",
+      "product": "J457AP",
+      "soc": "T8103",
+      "caution": "Asahi Linux supports this Mac, but Bootsahi has not yet completed an install on real Apple hardware (tuna-os/bootsahi#160). Back up this Mac before you continue. Some hardware may not work under Linux; see https://asahilinux.org/docs/platform/feature-support/m1/ for this model."
+    },
+    {
+      "model": "MacBookPro18,1",
+      "name": "MacBook Pro (16-inch, M1 Pro, 2021)",
+      "product": "J316sAP",
+      "soc": "T6000",
+      "caution": "Asahi Linux supports this Mac, but Bootsahi has not yet completed an install on real Apple hardware (tuna-os/bootsahi#160). Back up this Mac before you continue. Some hardware may not work under Linux; see https://asahilinux.org/docs/platform/feature-support/m1/ for this model."
+    },
+    {
+      "model": "MacBookPro18,2",
+      "name": "MacBook Pro (16-inch, M1 Max, 2021)",
+      "product": "J316cAP",
+      "soc": "T6001",
+      "caution": "Asahi Linux supports this Mac, but Bootsahi has not yet completed an install on real Apple hardware (tuna-os/bootsahi#160). Back up this Mac before you continue. Some hardware may not work under Linux; see https://asahilinux.org/docs/platform/feature-support/m1/ for this model."
+    },
+    {
+      "model": "MacBookPro18,3",
+      "name": "MacBook Pro (14-inch, M1 Pro, 2021)",
+      "product": "J314sAP",
+      "soc": "T6000",
+      "caution": "Asahi Linux supports this Mac, but Bootsahi has not yet completed an install on real Apple hardware (tuna-os/bootsahi#160). Back up this Mac before you continue. Some hardware may not work under Linux; see https://asahilinux.org/docs/platform/feature-support/m1/ for this model."
+    },
+    {
+      "model": "MacBookPro18,4",
+      "name": "MacBook Pro (14-inch, M1 Max, 2021)",
+      "product": "J314cAP",
+      "soc": "T6001",
+      "caution": "Asahi Linux supports this Mac, but Bootsahi has not yet completed an install on real Apple hardware (tuna-os/bootsahi#160). Back up this Mac before you continue. Some hardware may not work under Linux; see https://asahilinux.org/docs/platform/feature-support/m1/ for this model."
+    },
+    {
+      "model": "Mac13,1",
+      "name": "Mac Studio (M1 Max, 2022)",
+      "product": "J375cAP",
+      "soc": "T6001",
+      "caution": "Asahi Linux supports this Mac, but Bootsahi has not yet completed an install on real Apple hardware (tuna-os/bootsahi#160). Back up this Mac before you continue. Some hardware may not work under Linux; see https://asahilinux.org/docs/platform/feature-support/m1/ for this model."
+    },
+    {
+      "model": "Mac13,2",
+      "name": "Mac Studio (M1 Ultra, 2022)",
+      "product": "J375dAP",
+      "soc": "T6002",
+      "caution": "Asahi Linux supports this Mac, but Bootsahi has not yet completed an install on real Apple hardware (tuna-os/bootsahi#160). Back up this Mac before you continue. Some hardware may not work under Linux; see https://asahilinux.org/docs/platform/feature-support/m1/ for this model. HDMI audio is not available on M1 Ultra models."
+    },
+    {
+      "model": "Mac14,7",
+      "name": "MacBook Pro (13-inch, M2, 2022)",
+      "product": "J493AP",
+      "soc": "T8112",
+      "caution": "Asahi Linux supports this Mac, but Bootsahi has not yet completed an install on real Apple hardware (tuna-os/bootsahi#160). Back up this Mac before you continue. Some hardware may not work under Linux; see https://asahilinux.org/docs/platform/feature-support/m2/ for this model."
+    },
+    {
+      "model": "Mac14,2",
+      "name": "MacBook Air (13-inch, M2, 2022)",
+      "product": "J413AP",
+      "soc": "T8112",
+      "caution": "Asahi Linux supports this Mac, but Bootsahi has not yet completed an install on real Apple hardware (tuna-os/bootsahi#160). Back up this Mac before you continue. Some hardware may not work under Linux; see https://asahilinux.org/docs/platform/feature-support/m2/ for this model."
+    },
+    {
+      "model": "Mac14,3",
+      "name": "Mac mini (M2, 2023)",
+      "product": "J473AP",
+      "soc": "T8112",
+      "caution": "Asahi Linux supports this Mac, but Bootsahi has not yet completed an install on real Apple hardware (tuna-os/bootsahi#160). Back up this Mac before you continue. Some hardware may not work under Linux; see https://asahilinux.org/docs/platform/feature-support/m2/ for this model."
+    },
+    {
+      "model": "Mac14,12",
+      "name": "Mac mini (M2 Pro, 2023)",
+      "product": "J474sAP",
+      "soc": "T6020",
+      "caution": "Asahi Linux supports this Mac, but Bootsahi has not yet completed an install on real Apple hardware (tuna-os/bootsahi#160). Back up this Mac before you continue. Some hardware may not work under Linux; see https://asahilinux.org/docs/platform/feature-support/m2/ for this model."
+    },
+    {
+      "model": "Mac14,9",
+      "name": "MacBook Pro (14-inch, M2 Pro, 2023)",
+      "product": "J414sAP",
+      "soc": "T6020",
+      "caution": "Asahi Linux supports this Mac, but Bootsahi has not yet completed an install on real Apple hardware (tuna-os/bootsahi#160). Back up this Mac before you continue. Some hardware may not work under Linux; see https://asahilinux.org/docs/platform/feature-support/m2/ for this model."
+    },
+    {
+      "model": "Mac14,10",
+      "name": "MacBook Pro (16-inch, M2 Pro, 2023)",
+      "product": "J416sAP",
+      "soc": "T6020",
+      "caution": "Asahi Linux supports this Mac, but Bootsahi has not yet completed an install on real Apple hardware (tuna-os/bootsahi#160). Back up this Mac before you continue. Some hardware may not work under Linux; see https://asahilinux.org/docs/platform/feature-support/m2/ for this model."
+    },
+    {
+      "model": "Mac14,5",
+      "name": "MacBook Pro (14-inch, M2 Max, 2023)",
+      "product": "J414cAP",
+      "soc": "T6021",
+      "caution": "Asahi Linux supports this Mac, but Bootsahi has not yet completed an install on real Apple hardware (tuna-os/bootsahi#160). Back up this Mac before you continue. Some hardware may not work under Linux; see https://asahilinux.org/docs/platform/feature-support/m2/ for this model."
+    },
+    {
+      "model": "Mac14,6",
+      "name": "MacBook Pro (16-inch, M2 Max, 2023)",
+      "product": "J416cAP",
+      "soc": "T6021",
+      "caution": "Asahi Linux supports this Mac, but Bootsahi has not yet completed an install on real Apple hardware (tuna-os/bootsahi#160). Back up this Mac before you continue. Some hardware may not work under Linux; see https://asahilinux.org/docs/platform/feature-support/m2/ for this model."
+    },
+    {
+      "model": "Mac14,15",
+      "name": "MacBook Air (15-inch, M2, 2023)",
+      "product": "J415AP",
+      "soc": "T8112",
+      "caution": "Asahi Linux supports this Mac, but Bootsahi has not yet completed an install on real Apple hardware (tuna-os/bootsahi#160). Back up this Mac before you continue. Some hardware may not work under Linux; see https://asahilinux.org/docs/platform/feature-support/m2/ for this model."
+    },
+    {
+      "model": "Mac14,13",
+      "name": "Mac Studio (M2 Max, 2023)",
+      "product": "J475cAP",
+      "soc": "T6021",
+      "caution": "Asahi Linux supports this Mac, but Bootsahi has not yet completed an install on real Apple hardware (tuna-os/bootsahi#160). Back up this Mac before you continue. Some hardware may not work under Linux; see https://asahilinux.org/docs/platform/feature-support/m2/ for this model."
+    },
+    {
+      "model": "Mac14,14",
+      "name": "Mac Studio (M2 Ultra, 2023)",
+      "product": "J475dAP",
+      "soc": "T6022",
+      "caution": "Asahi Linux supports this Mac, but Bootsahi has not yet completed an install on real Apple hardware (tuna-os/bootsahi#160). Back up this Mac before you continue. Some hardware may not work under Linux; see https://asahilinux.org/docs/platform/feature-support/m2/ for this model. HDMI audio is not available on M2 Ultra models."
+    },
+    {
+      "model": "Mac14,8",
+      "name": "Mac Pro (2023)",
+      "product": "J180dAP",
+      "soc": "T6022",
+      "caution": "Asahi Linux supports this Mac, but Bootsahi has not yet completed an install on real Apple hardware (tuna-os/bootsahi#160). Back up this Mac before you continue. Some hardware may not work under Linux; see https://asahilinux.org/docs/platform/feature-support/m2/ for this model. HDMI audio is not available on M2 Ultra models."
+    }
+  ]
+}
