@@ -169,19 +169,13 @@ else
 fi
 
 # Check that the unit is ENABLED. A shipped-but-unenabled unit is a silent
-# no-op on first boot. Check both possible wants directories: /etc takes
-# precedence when present, /usr/lib is the image default.
-enabled=0
-for d in "$OSROOT/etc/systemd/system/multi-user.target.wants" \
-         "$OSROOT/usr/lib/systemd/system/multi-user.target.wants"; do
-	if [ -L "$d/bootsahi-agent.service" ] 2>/dev/null; then
-		ok "agent unit ENABLED (wants symlink in ${d#$OSROOT})"
-		enabled=1
-		break
-	fi
-done
-if [ "$enabled" -eq 0 ]; then
-	bad "agent unit NOT enabled — it would never run on first boot"
+# no-op on first boot. Only the /usr/lib wants directory counts: it is part of
+# the image, while a link in the image's /etc did not reach the installed
+# payload (#105).
+if [ -L "$OSROOT/usr/lib/systemd/system/multi-user.target.wants/bootsahi-agent.service" ]; then
+	ok "agent unit ENABLED (wants symlink in /usr/lib/systemd/system)"
+else
+	bad "agent unit NOT enabled under /usr/lib/systemd/system — it would never run on first boot"
 fi
 
 # Check for the never-matching ConditionKernelVersion=asahi bug (#23).

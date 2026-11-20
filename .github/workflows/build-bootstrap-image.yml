@@ -107,7 +107,8 @@ jobs:
           }
           check "bootsahi-agent executable"   '[ -x /usr/libexec/bootsahi-agent ]'
           check "asahi-bootbin-sync present"  '[ -x /usr/libexec/asahi-bootbin-sync ]'
-          check "agent unit enabled"          '[ -L /etc/systemd/system/multi-user.target.wants/bootsahi-agent.service ] || [ -L /usr/lib/systemd/system/multi-user.target.wants/bootsahi-agent.service ]'
+          # Under /usr only: a link in /etc does not reach the installed payload (#105).
+          check "agent unit enabled (/usr)"   '[ -L /usr/lib/systemd/system/multi-user.target.wants/bootsahi-agent.service ]'
           check "fisherman"                   'command -v fisherman'
           check "jq"                          'command -v jq'
           check "cosign"                      'command -v cosign'
