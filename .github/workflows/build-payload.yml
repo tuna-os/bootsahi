@@ -1,20 +1,23 @@
 name: Build asahi-installer payload
 
-# D0 of docs/DESIGN.md: package a bootc aarch64 image as an asahi-installer
-# payload (esp/ + root.img zip + installer_data.json). Dispatch against any
-# asahi-capable image; artifact-only until R2 credentials are wired.
+# D0 of docs/DESIGN.md: package the bootsahi bootstrap as an asahi-installer
+# payload (esp/ + root.img zip + installer_data.json). Artifact-only until R2
+# credentials are wired.
+#
+# The image is run `--privileged --pid=host` with the host's /dev, in a job
+# that can hold R2 credentials, so it must be exactly a bootstrap that a main
+# build of build-bootstrap-image.yml signed (#97, #122): a digest-pinned
+# ghcr.io/tuna-os/bootsahi-bootstrap reference, verified with cosign against
+# that workflow's refs/heads/main identity before anything pulls or runs it.
+# No tag is accepted, so the bytes packaged are the bytes that were verified.
 
 on:
   workflow_dispatch:
     inputs:
       image:
-        description: "Image to package. Default is the bootsahi BOOTSTRAP — a stock desktop image boots but cannot install (issue #27)."
-        default: "ghcr.io/tuna-os/bootsahi-bootstrap:latest"
+        description: "Signed bootstrap, pinned by digest: ghcr.io/tuna-os/bootsahi-bootstrap@sha256:… (printed in the summary of a main build-bootstrap-image run)"
+        required: true
         type: string
-      require_bootstrap:
-        description: "Fail if the image is not a bootsahi bootstrap (no agent/unit/fisherman inside)"
-        default: true
-        type: boolean
       name:
         description: "Payload name"
         default: "tunaos-bootstrap"
@@ -36,6 +39,10 @@ permissions:
   contents: read
   packages: read
 
+env:
+  BOOTSTRAP_IDENTITY: https://github.com/tuna-os/bootsahi/.github/workflows/build-bootstrap-image.yml@refs/heads/main
+  BOOTSTRAP_ISSUER: https://token.actions.githubusercontent.com
+
 jobs:
   payload:
     runs-on: ubuntu-26.04-arm
@@ -45,17 +52,39 @@ jobs:
         with:
           persist-credentials: false
 
+      - name: Install cosign (the version the bootstrap ships)
+        run: |
+          ./scripts/install-cosign.sh "$RUNNER_TEMP/bin"
+          echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
+
+      - name: Verify the bootstrap signature
+        # Dispatch inputs travel via env, never interpolated into the script
+        # body: a value containing shell metacharacters would be parsed as
+        # commands after expression substitution (bootc-installer-asahi#75).
+        id: verify
+        env:
+          PAYLOAD_IMAGE: ${{ inputs.image }}
+        run: |
+          set -euo pipefail
+          if ! [[ "$PAYLOAD_IMAGE" =~ ^ghcr\.io/tuna-os/bootsahi-bootstrap@sha256:[0-9a-f]{64}$ ]]; then
+            echo "::error::image must be ghcr.io/tuna-os/bootsahi-bootstrap@sha256:<digest>; tags and other repositories are refused"
+            exit 1
+          fi
+          pinned=$(./scripts/verify-image.sh "$PAYLOAD_IMAGE" "$BOOTSTRAP_IDENTITY" "$BOOTSTRAP_ISSUER")
+          if [ "$pinned" != "$PAYLOAD_IMAGE" ]; then
+            echo "::error::verified $pinned, which is not the requested $PAYLOAD_IMAGE"
+            exit 1
+          fi
+          echo "pinned=$pinned" >> "$GITHUB_OUTPUT"
+
       - name: Login to GHCR
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: echo "$GH_TOKEN" | sudo podman login ghcr.io --username "${GITHUB_ACTOR}" --password-stdin
 
       - name: Pull image
-        # Dispatch inputs travel via env, never interpolated into the script
-        # body: a value containing shell metacharacters would be parsed as
-        # commands after expression substitution (bootc-installer-asahi#75).
         env:
-          PAYLOAD_IMAGE: ${{ inputs.image }}
+          PAYLOAD_IMAGE: ${{ steps.verify.outputs.pinned }}
         run: sudo podman pull "$PAYLOAD_IMAGE"
 
       - name: Free up disk space
@@ -69,14 +98,21 @@ jobs:
       - name: Build payload
         env:
           TARGET_MIN_GB: ${{ inputs.target_min_gb }}
-          PAYLOAD_IMAGE: ${{ inputs.image }}
+          PAYLOAD_IMAGE: ${{ steps.verify.outputs.pinned }}
           PAYLOAD_NAME: ${{ inputs.name }}
           PAYLOAD_SIZE_GB: ${{ inputs.bootstrap_size_gb }}
-        run: sudo -E ./scripts/make-payload.sh "$PAYLOAD_IMAGE" "$PAYLOAD_NAME" "$PAYLOAD_SIZE_GB"
+        run: |
+          sudo -E ./scripts/make-payload.sh "$PAYLOAD_IMAGE" "$PAYLOAD_NAME" "$PAYLOAD_SIZE_GB"
+          # Which verified bootstrap this payload packages, and from which
+          # revision of this repo, so a published payload can be traced back
+          # and rolled back to an exact input (#122).
+          jq -n --arg image "$PAYLOAD_IMAGE" --arg sha "$GITHUB_SHA" --arg run "$GITHUB_RUN_ID" \
+            '{bootstrapImage: $image, sourceSha: $sha, runId: $run}' \
+            | sudo tee "out/$PAYLOAD_NAME.provenance.json"
 
       - name: "Test: payload structure, boot chain, rootfs, installer_data"
         env:
-          REQUIRE_BOOTSTRAP: ${{ inputs.require_bootstrap && '1' || '0' }}
+          REQUIRE_BOOTSTRAP: "1"
           PAYLOAD_NAME: ${{ inputs.name }}
         run: sudo -E ./scripts/test-payload.sh "out/$PAYLOAD_NAME.zip" out/installer_data.json
 

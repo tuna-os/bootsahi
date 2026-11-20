@@ -68,10 +68,13 @@ RUN chmod 0755 /usr/libexec/bootsahi-agent /usr/libexec/asahi-bootbin-sync /usr/
 
 # A marker the payload verifier keys on, so a payload built from a stock desktop
 # image cannot be mistaken for a bootstrap. Records the pinned fisherman
-# revision for the same reason it is pinned at all.
+# revision for the same reason it is pinned at all, and the base image ref (CI
+# passes the verified arm64 digest, #97) so a bootstrap names what it was
+# built from.
+ARG BASE_IMAGE
 RUN mkdir -p /usr/share/bootsahi && \
-    printf 'name=bootsahi-bootstrap\nfisherman_revision=%s\ncosign_version=%s\n' \
-      "${FISHERMAN_REVISION}" "${COSIGN_VERSION}" \
+    printf 'name=bootsahi-bootstrap\nfisherman_revision=%s\ncosign_version=%s\nbase_image=%s\n' \
+      "${FISHERMAN_REVISION}" "${COSIGN_VERSION}" "${BASE_IMAGE}" \
       > /usr/share/bootsahi/bootstrap-release
 
 RUN bootc container lint || true
