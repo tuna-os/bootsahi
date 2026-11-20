@@ -79,9 +79,12 @@ Other PR checks:
 - `actions-security.yml` (every PR): `gh actions-lock --verify` checks
   `.github/workflows/actions.lock`, and zizmor lints the workflows.
 - `actionlint.yml` (PRs that change `.github/workflows/**`): actionlint.
-- `ste.yml` (PRs that change Markdown or `.ste-budget`): a check of the
-  Markdown against Simplified Technical English. The number of findings must
-  not go above the number in `.ste-budget`.
+- `ste.yml` (PRs that change Markdown, `.ste-budget` or `ste.yml`): a check
+  of the Markdown against Simplified Technical English. The budget is a
+  ratchet. The number of findings must be equal to the number in
+  `.ste-budget`. If your PR removes findings, the check fails and gives the
+  new number. Write that number into `.ste-budget` in the same PR. A PR that
+  raises `.ste-budget` needs the `ratchet-raise` label.
 
 ## Code style
 
