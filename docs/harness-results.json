@@ -6,18 +6,18 @@
       "desktop": "gnome",
       "stream": "stable",
       "imgref": "ghcr.io/tuna-os/bonito:gnome-asahi",
-      "passRate": "36/36",
-      "harnessRef": "https://github.com/tuna-os/tunaOS/issues/776",
-      "verifiedAt": "2026-07-30"
+      "passRate": "37/37",
+      "harnessRef": "https://github.com/tuna-os/tunaOS/actions/runs/44667755150",
+      "verifiedAt": "2026-11-20"
     },
     {
       "variant": "grouper",
       "desktop": "gnome",
       "stream": "stable",
       "imgref": "ghcr.io/tuna-os/grouper:gnome-asahi",
-      "passRate": "36/36",
-      "harnessRef": "https://github.com/tuna-os/tunaOS/issues/776",
-      "verifiedAt": "2026-07-30"
+      "passRate": "37/37",
+      "harnessRef": "https://github.com/tuna-os/tunaOS/actions/runs/44667761621",
+      "verifiedAt": "2026-11-20"
     }
   ]
 }
