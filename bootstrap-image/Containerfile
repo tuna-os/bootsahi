@@ -62,9 +62,17 @@ COPY asahi-bootbin-sync.service /usr/lib/systemd/system/asahi-bootbin-sync.servi
 COPY install-config.schema.json /usr/share/bootsahi/install-config.schema.json
 COPY trusted-signers.json /usr/share/bootsahi/trusted-signers.json
 
+# Enable the units under /usr, not /etc (#105). `systemctl enable` writes the
+# wants symlinks to /etc/systemd/system. After `bootc install to-disk`, /etc
+# lives in the deployment state rather than in the image's /usr tree, and the
+# payload check found no enable link there. Links under
+# /usr/lib/systemd/system/<target>.wants are part of the image itself, so every
+# deployment of it starts the agent on first boot.
 RUN chmod 0755 /usr/libexec/bootsahi-agent /usr/libexec/asahi-bootbin-sync /usr/bin/fisherman && \
     chmod 0644 /usr/libexec/bootsahi-agent-recipe.sh /usr/libexec/bootsahi-agent-policy.sh /usr/libexec/bootsahi-agent-device.sh && \
-    systemctl enable bootsahi-agent.service asahi-bootbin-sync.service
+    mkdir -p /usr/lib/systemd/system/multi-user.target.wants && \
+    ln -sf ../bootsahi-agent.service /usr/lib/systemd/system/multi-user.target.wants/bootsahi-agent.service && \
+    ln -sf ../asahi-bootbin-sync.service /usr/lib/systemd/system/multi-user.target.wants/asahi-bootbin-sync.service
 
 # A marker the payload verifier keys on, so a payload built from a stock desktop
 # image cannot be mistaken for a bootstrap. Records the pinned fisherman
