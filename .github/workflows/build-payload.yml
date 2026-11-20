@@ -120,8 +120,16 @@ jobs:
           # installer_data.json names this release's own immutable zip URL; the
           # stable asahi/installer_data.json pointer is a copy of it, written
           # only after the release is uploaded and verified.
-          BASE_URL="${PUBLIC_BASE}/releases/${RELEASE_VERSION}" \
-            sudo -E ./scripts/make-payload.sh "$PAYLOAD_IMAGE" "$PAYLOAD_NAME" "$PAYLOAD_SIZE_GB"
+          #
+          # Variables go through `sudo env`: this runner's sudo ignores -E
+          # ("preserving the entire environment is not supported"), so -E
+          # silently dropped BASE_URL and TARGET_MIN_GB (run 44684897698).
+          base_url="${PUBLIC_BASE}/releases/${RELEASE_VERSION}"
+          sudo env BASE_URL="$base_url" TARGET_MIN_GB="$TARGET_MIN_GB" \
+            ./scripts/make-payload.sh "$PAYLOAD_IMAGE" "$PAYLOAD_NAME" "$PAYLOAD_SIZE_GB"
+          got=$(jq -r '.os_list[0].package' out/installer_data.json)
+          [ "$got" = "$base_url/$PAYLOAD_NAME.zip" ] ||
+            { echo "::error::installer_data.json names $got, not $base_url/$PAYLOAD_NAME.zip"; exit 1; }
           # Which verified bootstrap this payload packages, and from which
           # revision of this repo, so a published payload can be traced back
           # and rolled back to an exact input (#122).
@@ -134,7 +142,7 @@ jobs:
         env:
           REQUIRE_BOOTSTRAP: "1"
           PAYLOAD_NAME: ${{ inputs.name }}
-        run: sudo -E ./scripts/test-payload.sh "out/$PAYLOAD_NAME.zip" out/installer_data.json
+        run: sudo env REQUIRE_BOOTSTRAP="$REQUIRE_BOOTSTRAP" ./scripts/test-payload.sh "out/$PAYLOAD_NAME.zip" out/installer_data.json
 
       - name: Install qemu + U-Boot firmware
         run: |
