@@ -82,6 +82,7 @@ jobs:
           check "fisherman"                   'command -v fisherman'
           check "jq"                          'command -v jq'
           check "cosign"                      'command -v cosign'
+          check "skopeo"                      'command -v skopeo'
           check "nmcli"                       'command -v nmcli'
           check "blkid"                       'command -v blkid'
           check "bootstrap-release marker"    '[ -f /usr/share/bootsahi/bootstrap-release ]'

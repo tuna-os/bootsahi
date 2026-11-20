@@ -197,7 +197,7 @@ fi
 # ── 3. Tools the agent shells out to ────────────────────────────────────
 echo
 echo "== 3. Required tools =="
-for t in fisherman jq cosign nmcli blkid; do
+for t in fisherman jq cosign skopeo nmcli blkid; do
 	found=0
 	for p in "$OSROOT/usr/bin/$t" "$OSROOT/usr/sbin/$t" "$OSROOT/usr/libexec/$t"; do
 		if [ -x "$p" ] || [ -f "$p" ]; then

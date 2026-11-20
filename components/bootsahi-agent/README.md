@@ -48,8 +48,10 @@ disk-auto-partition path.
   are required, and the pair must be listed in
   [`trusted-signers.json`](trusted-signers.json), which ships in the bootstrap:
   the config sits on the ESP beside the image reference, so it can select a
-  trusted signer but not introduce one. The agent deploys the digest cosign
-  verified. `BOOTSAHI_ALLOW_UNVERIFIED=1` is a dev/test-only escape hatch that
+  trusted signer but not introduce one. The agent resolves the target tag to
+  its linux/arm64 manifest digest with `skopeo`, has cosign verify that
+  digest (tunaOS signs per-platform manifests), and deploys that digest.
+  `BOOTSAHI_ALLOW_UNVERIFIED=1` is a dev/test-only escape hatch that
   taints the run, never for production bootstrap images.
 - Builds a fisherman recipe with `customMounts` (ESP + root, both
   pre-partitioned), `bootloader: "systemd"` (per fisherman's own docs, this
@@ -79,10 +81,10 @@ disk-auto-partition path.
 - schema → `/usr/share/bootsahi/install-config.schema.json`
 - trusted signers → `/usr/share/bootsahi/trusted-signers.json`
 
-Requires `jq`, `cosign` and (for install) the `fisherman` binary reachable on
-`$PATH`. `nmcli` is optional — its absence only disables Wi-Fi connect. A
-missing `cosign`, schema or trusted-signers list is a hard failure (refuse to
-deploy unverified).
+Requires `jq`, `cosign`, `skopeo` and (for install) the `fisherman` binary
+reachable on `$PATH`. `nmcli` is optional — its absence only disables Wi-Fi
+connect. A missing `cosign`, `skopeo`, schema or trusted-signers list is a hard
+failure (refuse to deploy unverified).
 
 ## Testing
 
