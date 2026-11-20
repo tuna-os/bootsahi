@@ -92,7 +92,12 @@ jobs:
           # test-agent-device.sh from its own directory; point both at the
           # shipped libraries the same way.
           echo "  -- agent selftest inside the image --"
-          podman run --rm -v "$PWD/components/bootsahi-agent:/t:ro" --entrypoint /bin/bash "$TAG" \
+          # The copied test-agent.sh runs from /tmp, so its
+          # $HERE/../../scripts/fisherman-rev.sh resolves to /scripts, and that
+          # tool reads /bootstrap-image/fisherman.rev (#205).
+          podman run --rm -v "$PWD/components/bootsahi-agent:/t:ro" \
+            -v "$PWD/scripts:/scripts:ro" -v "$PWD/bootstrap-image:/bootstrap-image:ro" \
+            --entrypoint /bin/bash "$TAG" \
             -c 'cp /t/test-agent.sh /t/test-agent-device.sh /tmp/ && sed -i -e "s#\$HERE/bootsahi-agent.sh#/usr/libexec/bootsahi-agent#" -e "s#\$HERE/bootsahi-agent-recipe.sh#/usr/libexec/bootsahi-agent-recipe.sh#" /tmp/test-agent.sh && sed -i "s#\$HERE/bootsahi-agent-device.sh#/usr/libexec/bootsahi-agent-device.sh#" /tmp/test-agent-device.sh && bash /tmp/test-agent.sh' || fail=1
           [ "$fail" -eq 0 ]
 
