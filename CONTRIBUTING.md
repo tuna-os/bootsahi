@@ -57,6 +57,9 @@ sudo ./scripts/selftest.sh
 # asahi-bootbin-sync: boot.bin staleness/backup/restore logic (hermetic, no root)
 ./components/asahi-bootbin-sync/test-asahi-bootbin-sync.sh
 
+# R2 publish: immutable releases, pointer moves last, nothing deleted (needs rclone)
+./scripts/test-publish-payload.sh
+
 # Disk resolution + real fisherman `validate` (needs root, gdisk, a built fisherman)
 sudo ./components/bootsahi-agent/test-agent-disk.sh
 ```

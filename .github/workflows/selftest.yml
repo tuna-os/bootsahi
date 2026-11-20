@@ -57,7 +57,7 @@ jobs:
       # second step, which is where it used to live — the first step would have
       # failed on a missing jq before ever reaching the install.
       - name: Install test dependencies
-        run: sudo apt-get update && sudo apt-get install -y jq
+        run: sudo apt-get update && sudo apt-get install -y jq rclone
       - name: Harness selftest (payload structure + installer_data layout contract)
         run: sudo ./scripts/selftest.sh
       # The D2<->D1 boundary. The macOS backend and the Linux agent live in
@@ -71,6 +71,8 @@ jobs:
         run: ./scripts/test-backend-contract.sh
       - name: bootsahi-agent selftest (install-config.json -> recipe.json contract)
         run: ./components/bootsahi-agent/test-agent.sh
+      - name: R2 publish selftest (immutable releases, pointer moves last, nothing deleted)
+        run: ./scripts/test-publish-payload.sh
       # The one that covers the question that destroys machines: on a disk
       # carrying BOTH the bootstrap the agent runs from and the target it may
       # format, does it choose correctly and refuse when it cannot prove
