@@ -15,9 +15,10 @@ cost you a Mac or a wasted week.
 The catalog is just registry refs, so "a new variant needs no installer
 change". That must never be read as "a new variant needs no verification".
 Every `CatalogEntry` carries `verified` (default `false`) and the app offers
-only `true` entries. As of 2026-07-30 only `bonito` and `grouper` pass the
-Asahi golden-manifest harness (36/36 each); the other six promoted `*-asahi`
-tags **would leave a Mac unbootable**
+only `true` entries. The catalog verifies only `bonito` and `grouper`: they
+passed the Asahi golden-manifest harness 36/36 each on 2026-07-30 and 37/37
+each on 2026-11-20 (the runs are linked in `docs/harness-results.json`). On 2026-07-30 the other
+six promoted `*-asahi` tags **would have left a Mac unbootable**
 ([tunaOS#776](https://github.com/tuna-os/tunaOS/issues/776)).
 
 Never set `verified: true` from tag enumeration, a green build, or the fact
