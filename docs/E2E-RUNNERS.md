@@ -3,8 +3,8 @@
 This page answers
 [#74](https://github.com/tuna-os/bootc-installer-asahi/issues/74):
 can AWS, through [RunsOn](https://runs-on.com), run the end-to-end tests for
-this project? The other tuna-os repositories already use RunsOn. The tunaOS and
-tacklebox repositories set their runners in `.github/runs-on.yml`. bootc-migrate selects
+this project? Some other tuna-os repositories already use RunsOn. The tunaOS
+repository sets its runners in `.github/runs-on.yml`. bootc-migrate selects
 RunsOn with the `E2E_RUNSON_SPEC` variable.
 
 ## Short answer
