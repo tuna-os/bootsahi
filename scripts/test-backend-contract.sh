@@ -35,7 +35,12 @@ set -euo pipefail
 # Pinned deliberately, exactly like FISHERMAN_REV. "Which backend did we test
 # against?" has to stay answerable after the fact, and a floating branch would
 # make a green run mean nothing in a week.
-BACKEND_REPO="${BACKEND_REPO:-https://github.com/hanthor/asahi-installer}"
+#
+# The fork that carried this revision (hanthor/asahi-installer) is no longer
+# reachable, but GitHub keeps fork-network objects addressable from the
+# upstream repo, so the same commit is fetched by SHA from there. The SHA is
+# the identity; the rev-parse check below still proves we got exactly it.
+BACKEND_REPO="${BACKEND_REPO:-https://github.com/AsahiLinux/asahi-installer}"
 BACKEND_REV="${BACKEND_REV:-4cb26d8a0d831476b7e76bdf88cda0a8c5b5164e}"
 
 for t in git python3; do
@@ -54,8 +59,11 @@ trap 'rm -rf "$WORK"' EXIT
 fail=0
 
 echo "==> Fetching the pinned backend ($BACKEND_REV)"
-git clone --quiet "$BACKEND_REPO" "$WORK/backend"
-git -C "$WORK/backend" checkout --quiet "$BACKEND_REV"
+# Fetch the commit by SHA rather than cloning a branch: the pin need not be
+# on any branch of $BACKEND_REPO, only reachable from it.
+git init --quiet "$WORK/backend"
+git -C "$WORK/backend" fetch --quiet --depth=1 "$BACKEND_REPO" "$BACKEND_REV"
+git -C "$WORK/backend" checkout --quiet FETCH_HEAD
 checked_out=$(git -C "$WORK/backend" rev-parse HEAD)
 if [ "$checked_out" != "$BACKEND_REV" ]; then
 	echo "FAIL: backend checkout resolved to $checked_out, expected pinned $BACKEND_REV"
