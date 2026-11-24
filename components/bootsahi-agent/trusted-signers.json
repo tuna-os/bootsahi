@@ -2,7 +2,8 @@
   "signers": [
     {
       "cosignIdentity": "https://github.com/tuna-os/tunaOS/.github/workflows/reusable-build-image.yml@refs/heads/main",
-      "cosignIssuer": "https://token.actions.githubusercontent.com"
+      "cosignIssuer": "https://token.actions.githubusercontent.com",
+      "imagePrefixes": ["ghcr.io/tuna-os/"]
     }
   ]
 }

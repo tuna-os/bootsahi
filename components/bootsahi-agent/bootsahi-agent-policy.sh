@@ -199,6 +199,33 @@ signer_is_trusted() {
     ' "$signers_file" >/dev/null 2>>"$LOG_FILE"
 }
 
+# signer_allows_image reports whether a trusted signer may vouch for imgref:
+# the reference must start with one of that signer's imagePrefixes.
+#
+# The identity does not tie an image to tunaOS by itself. The trusted identity
+# is a reusable workflow, and a keyless certificate names the reusable workflow
+# a job runs, not the repository that called it. Any repository can call a
+# public reusable workflow, push to its own registry namespace and get a
+# signature with this identity. What such a caller cannot do is write to the
+# namespace of the project. cosign reads a signature from the repository of the
+# image it verifies, so a reference under a listed prefix can only carry
+# signatures that the owner of that namespace pushed.
+#
+# A prefix must end with "/": "ghcr.io/tuna-os" would also match
+# "ghcr.io/tuna-os-evil/image". Fails closed: a signer with no usable prefix
+# vouches for no image, and so does a missing or unparsable list.
+signer_allows_image() {
+    local identity="$1" issuer="$2" imgref="$3" signers_file
+    signers_file=$(find_trusted_signers)
+    [ -n "$signers_file" ] || return 1
+    jq -e --arg id "$identity" --arg iss "$issuer" --arg ref "$imgref" '
+        any(.signers[]?
+            | select(.cosignIdentity == $id and .cosignIssuer == $iss)
+            | .imagePrefixes[]?;
+            type == "string" and endswith("/") and (. as $prefix | $ref | startswith($prefix)))
+    ' "$signers_file" >/dev/null 2>>"$LOG_FILE"
+}
+
 # resolve_platform_digest prints the digest of the linux/arm64 image manifest
 # behind imgref, the one manifest this machine can run.
 #
@@ -255,7 +282,9 @@ resolve_platform_digest() {
 #     for the same identity string from ANY OIDC provider. The pair must also
 #     be one the bootstrap ships in trusted-signers.json (see
 #     signer_is_trusted): a policy the config can rewrite is no more a policy
-#     than one it can omit.
+#     than one it can omit. The image must also be in a registry namespace
+#     that the list gives that signer (see signer_allows_image), because the
+#     config names the image too.
 #  2. Verify and deploy the SAME BYTES. Verifying a tag and then handing that
 #     tag to the installer is a TOCTOU race — the tag can move between the two,
 #     so what was verified is not necessarily what lands. The agent resolves
@@ -293,6 +322,11 @@ verify_signature() {
         log "  cosignIdentity=$identity"
         log "  cosignIssuer=$issuer"
         log "refusing: a signature only proves authenticity against a signer the bootstrap ships"
+        return 1
+    fi
+    if ! signer_allows_image "$identity" "$issuer" "$imgref"; then
+        log "targetImgref=$imgref is not in an image namespace this bootstrap trusts that signer for"
+        log "refusing: any repository can get a signature with this identity for its own image"
         return 1
     fi
     if ! command -v cosign >/dev/null 2>&1; then

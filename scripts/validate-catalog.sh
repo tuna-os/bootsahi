@@ -17,7 +17,8 @@
 # alone, with nothing else in the diff, now fails this check.
 #
 # It also checks that every entry's cosign signer is one the bootstrap ships
-# in trusted-signers.json, since the agent refuses any other.
+# in trusted-signers.json, and that the entry's image is in a registry
+# namespace the list gives that signer, since the agent refuses any other.
 #
 # Usage: ./scripts/validate-catalog.sh
 set -euo pipefail
@@ -79,6 +80,19 @@ while IFS=$'\t' read -r imgref identity issuer; do
 		echo "ok: $imgref signer is trusted by the bootstrap"
 	else
 		echo "FAIL: $imgref names signer '$identity' (issuer '$issuer'), which is not in components/bootsahi-agent/trusted-signers.json"
+		fail=1
+		continue
+	fi
+	# The agent holds a signer to its imagePrefixes (signer_allows_image in
+	# bootsahi-agent-policy.sh; the same match is repeated here). An entry
+	# outside them is refused at the same late point.
+	if jq -e --arg id "$identity" --arg iss "$issuer" --arg ref "$imgref" \
+		'any(.signers[]? | select(.cosignIdentity == $id and .cosignIssuer == $iss) | .imagePrefixes[]?;
+		     type == "string" and endswith("/") and (. as $prefix | $ref | startswith($prefix)))' \
+		"$SIGNERS" >/dev/null; then
+		echo "ok: $imgref is in an image namespace of its signer"
+	else
+		echo "FAIL: $imgref is outside the imagePrefixes that components/bootsahi-agent/trusted-signers.json gives its signer"
 		fail=1
 	fi
 done < <(jq -r '.entries[] | [.imgref, .cosignIdentity, .cosignIssuer] | @tsv' "$CATALOG")

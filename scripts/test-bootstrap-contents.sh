@@ -281,15 +281,17 @@ else
 	echo "  WARN schema not found (not yet a hard requirement)"
 fi
 # The agent refuses every signed install without this list, and a list with no
-# usable entry trusts nobody, so both are hard failures.
+# usable entry trusts nobody, so both are hard failures. A signer with no
+# imagePrefixes entry ending in "/" vouches for no image, which is the same.
 SIGNERS="$OSROOT/usr/share/bootsahi/trusted-signers.json"
 if [ ! -f "$SIGNERS" ]; then
 	bad "trusted-signers.json MISSING — the agent refuses every install without it"
-elif jq -e '(.signers | length) > 0 and all(.signers[]; (.cosignIdentity // "") != "" and (.cosignIssuer // "") != "")' \
+elif jq -e '(.signers | length) > 0 and all(.signers[]; (.cosignIdentity // "") != "" and (.cosignIssuer // "") != ""
+		and any(.imagePrefixes[]?; type == "string" and endswith("/")))' \
 	"$SIGNERS" >/dev/null 2>&1; then
 	ok "trusted signers shipped ($(jq -r '.signers | length' "$SIGNERS") signer(s))"
 else
-	bad "trusted-signers.json lists no usable signer (each needs cosignIdentity and cosignIssuer)"
+	bad "trusted-signers.json lists no usable signer (each needs cosignIdentity, cosignIssuer and an imagePrefixes entry ending in /)"
 fi
 
 # ── 8. SSH toggle (headless install path) ────────────────────────────────

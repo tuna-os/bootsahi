@@ -15,7 +15,7 @@
   "properties": {
     "targetImgref": {
       "type": "string",
-      "description": "OCI ref to deploy, e.g. ghcr.io/tuna-os/bonito:gnome-asahi. Must resolve to an arm64 bootc image."
+      "description": "OCI ref to deploy, e.g. ghcr.io/tuna-os/bonito:gnome-asahi. Must resolve to an arm64 bootc image, and must be in a registry namespace that the bootstrap's trusted-signers.json gives the named signer (imagePrefixes); bootsahi-agent refuses any other."
     },
     "rootPartition": {
       "type": "string",

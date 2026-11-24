@@ -198,7 +198,26 @@ EOF
 # is listed here rather than in the real trusted-signers.json, so the shipped
 # list never has to carry a test identity.
 cat >"$WORK/trusted-signers.json" <<'EOF'
+{"signers": [{"cosignIdentity": "https://example.test/signer", "cosignIssuer": "https://example.test/oidc",
+              "imagePrefixes": ["ghcr.io/tuna-os/"]}]}
+EOF
+
+# A trusted signer, validly signing an image in someone else's registry
+# namespace. The trusted tunaOS identity is a reusable workflow, and any
+# repository can call it and get this signature for its own image.
+jq '.targetImgref = "ghcr.io/someone-else/image:latest"' "$WORK/good.json" >"$WORK/foreign-namespace.json"
+
+# A namespace that only starts with the same characters as the trusted one.
+jq '.targetImgref = "ghcr.io/tuna-os-evil/bonito:gnome-asahi"' "$WORK/good.json" >"$WORK/lookalike-namespace.json"
+
+# The same signer listed with no image namespace at all, and with a prefix that
+# does not end in "/" (which would also match the look-alike above).
+cat >"$WORK/trusted-signers-noprefix.json" <<'EOF'
 {"signers": [{"cosignIdentity": "https://example.test/signer", "cosignIssuer": "https://example.test/oidc"}]}
+EOF
+cat >"$WORK/trusted-signers-openprefix.json" <<'EOF'
+{"signers": [{"cosignIdentity": "https://example.test/signer", "cosignIssuer": "https://example.test/oidc",
+              "imagePrefixes": ["ghcr.io/tuna-os"]}]}
 EOF
 
 # A signer the bootstrap does not ship: someone's own workflow, validly signed.
@@ -225,7 +244,7 @@ EOF
 
 cat >"$WORK/cosign.json" <<'EOF'
 {
-  "targetImgref": "x", "rootPartition": "/dev/null", "espPartition": "/dev/zero",
+  "targetImgref": "ghcr.io/tuna-os/bonito:gnome-asahi", "rootPartition": "/dev/null", "espPartition": "/dev/zero",
   "filesystem": "btrfs", "hostname": "h",
   "cosignIdentity": "https://example.test/signer", "cosignIssuer": "https://example.test/oidc"
 }
@@ -443,6 +462,67 @@ check_exit "exit code (trusted identity, other issuer -> refuse)" 1 "$r"
 echo "==> trusted-signers.json missing -> refuse (fail closed, like the schema)"
 r=$(run_agent "$WORK/good.json" "$STUBS/fisherman-ok" BOOTSAHI_TRUSTED_SIGNERS_PATH="$WORK/no-such-signers.json")
 check_exit "exit code (no trusted-signers list -> refuse)" 1 "$r"
+
+# The cosign stub SUCCEEDS in these cases too: a trusted signer is not proof
+# that the image is tunaOS's, because the trusted identity is a reusable
+# workflow that any repository can call. Only the namespace check can refuse.
+refused_before_cosign() { # description config [extra_env...]
+	local desc="$1" cfg="$2" r
+	: >"$STUBS/cosign-refs.log"
+	# fisherman-dump leaves recipe-captured.json behind whenever it runs, so
+	# its absence shows that the install stopped before fisherman.
+	r=$(run_agent "$cfg" "$STUBS/fisherman-dump" "${@:3}")
+	check_exit "exit code ($desc -> refuse)" 1 "$r"
+	check "fisherman never ran ($desc)" "" "$(ls "$r/recipe-captured.json" 2>/dev/null || true)"
+	check "cosign not consulted ($desc)" "" "$(cat "$STUBS/cosign-refs.log")"
+}
+
+echo "==> trusted signer, image in another registry namespace -> refuse, even though cosign would verify"
+refused_before_cosign "trusted signer, foreign namespace" "$WORK/foreign-namespace.json"
+
+echo "==> trusted signer, look-alike namespace (ghcr.io/tuna-os-evil/) -> refuse"
+refused_before_cosign "trusted signer, look-alike namespace" "$WORK/lookalike-namespace.json"
+
+echo "==> a prefix without a trailing slash is not honoured (it would match the look-alike)"
+refused_before_cosign "open-ended prefix, look-alike namespace" "$WORK/lookalike-namespace.json" \
+	BOOTSAHI_TRUSTED_SIGNERS_PATH="$WORK/trusted-signers-openprefix.json"
+
+echo "==> signer listed with no image namespace -> refuse (fail closed)"
+refused_before_cosign "signer without imagePrefixes" "$WORK/good.json" \
+	BOOTSAHI_TRUSTED_SIGNERS_PATH="$WORK/trusted-signers-noprefix.json"
+
+# CI verifies the bootstrap's base image with scripts/verify-image.sh and the
+# shipped signer list, on a reference that can come from a dispatch input. It
+# must apply the same rule. Only in the repository tree: the in-image run of
+# this suite has no scripts/verify-image.sh beside the shipped agent.
+echo "==> verify-image.sh holds a shipped signer to its image namespaces"
+VERIFY_IMAGE="$HERE/../../scripts/verify-image.sh"
+if [ -x "$VERIFY_IMAGE" ] && [ -f "$HERE/trusted-signers.json" ] &&
+	[ "$(cd "$HERE/../.." && pwd)/components/bootsahi-agent" = "$HERE" ]; then
+	shipped_identity=$(jq -r '.signers[0].cosignIdentity' "$HERE/trusted-signers.json")
+	shipped_issuer=$(jq -r '.signers[0].cosignIssuer' "$HERE/trusted-signers.json")
+	: >"$STUBS/cosign-refs.log"
+	set +e
+	out=$(PATH="$STUBS/bin-ok:$PATH" "$VERIFY_IMAGE" "ghcr.io/someone-else/image:latest" \
+		"$shipped_identity" "$shipped_issuer" 2>/dev/null)
+	rc=$?
+	set -e
+	check "verify-image.sh refuses a shipped signer outside its namespaces" "nonzero" \
+		"$([ "$rc" -ne 0 ] && echo nonzero || echo "0 ($out)")"
+	check "verify-image.sh did not consult cosign for it" "" "$(cat "$STUBS/cosign-refs.log")"
+	check "verify-image.sh pins a shipped signer's image inside its namespace" \
+		"ghcr.io/tuna-os/bonito@$COSIGN_OK_DIGEST" \
+		"$(PATH="$STUBS/bin-ok:$PATH" "$VERIFY_IMAGE" "ghcr.io/tuna-os/bonito:gnome-asahi" \
+			"$shipped_identity" "$shipped_issuer" 2>/dev/null || true)"
+	# An identity the list does not carry (this repository's own bootstrap
+	# workflow) is bound to one repository by its caller, not by this rule.
+	check "verify-image.sh leaves an unlisted identity to its caller" \
+		"ghcr.io/someone-else/image@$COSIGN_OK_DIGEST" \
+		"$(PATH="$STUBS/bin-ok:$PATH" "$VERIFY_IMAGE" "ghcr.io/someone-else/image:latest" \
+			"https://example.test/unlisted" "https://example.test/oidc" 2>/dev/null || true)"
+else
+	echo "  skip: not running from the repository tree (no scripts/verify-image.sh for this agent)"
+fi
 
 echo "==> cosign verification FAILS (wrong signer / wrong issuer)"
 r=$(run_agent "$WORK/good.json" "$STUBS/fisherman-ok" PATH="$STUBS/bin-fail:$PATH")

@@ -28,6 +28,15 @@ log() { echo "verify-image: $*" >&2; }
 # shellcheck source=components/bootsahi-agent/bootsahi-agent-policy.sh
 source "$AGENT_LIB_DIR/bootsahi-agent-policy.sh"
 
+# A signer the bootstrap ships is trusted only for its own image namespaces
+# (signer_allows_image says why), and REF can come from a dispatch input. An
+# identity the list does not carry, such as this repository's bootstrap
+# workflow, is tied to one repository by the caller instead.
+if signer_is_trusted "$IDENTITY" "$ISSUER" && ! signer_allows_image "$IDENTITY" "$ISSUER" "$REF"; then
+	log "$REF is not in an image namespace trusted-signers.json gives $IDENTITY; refusing"
+	exit 1
+fi
+
 digest=$(resolve_platform_digest "$REF")
 
 # Strip any digest, then a tag (a colon after the last slash; a registry port
