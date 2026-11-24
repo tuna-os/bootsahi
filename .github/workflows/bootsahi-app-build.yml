@@ -92,8 +92,20 @@ jobs:
             echo "::error::Bootsahi built with minos=$minos, expected 13.0"
             exit 1
           fi
-      - name: swift test
-        run: swift test -v
+      - name: swift test (with coverage)
+        run: swift test -v --enable-code-coverage
+      - name: coverage report
+        run: |
+          json=$(swift test --show-codecov-path)
+          [ -s "$json" ] || { echo "::error::no codecov JSON at $json"; exit 1; }
+          pct=$(jq '.data[0].totals.lines.percent' "$json")
+          echo "line coverage: $pct%"
+          echo "### Swift line coverage: ${pct}%" >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v7.0.2
+        with:
+          name: swift-coverage
+          path: ${{ runner.temp }}/../**/codecov/*.json
+          if-no-files-found: warn
 
   # Regenerates docs/screenshots/*.png and the README walkthrough animation from
   # the real SwiftUI views. Two things this buys beyond pretty docs:
