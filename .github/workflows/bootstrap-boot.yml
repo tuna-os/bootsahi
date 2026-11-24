@@ -62,7 +62,7 @@ jobs:
                       /usr/local/share/boost /opt/hostedtoolcache/CodeQL || true
           df -h /
 
-      - uses: actions/setup-go@v7.0.0
+      - uses: actions/setup-go@v7.1.0
         with:
           go-version: "1.27"
 
