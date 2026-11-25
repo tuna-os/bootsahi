@@ -12,32 +12,34 @@ macOS-driven install flow for M1/M2 Macs. The repository is
 </p>
 
 <p align="center">
-  <em>Every frame is rendered in CI from the real SwiftUI views — see the
+  <em>CI renders every frame from the real SwiftUI views — see the
   <a href="docs/gui-walkthrough.md">step-by-step walkthrough</a>.</em>
 </p>
 
-**Architecture** (see [docs/DESIGN.md](docs/DESIGN.md)): instead of one
-installer payload per variant×desktop, we ship **one minimal bootstrap
-payload** whose first boot runs [fisherman](https://github.com/tuna-os/fisherman)
-to `bootc install` the image ref the user picked in the macOS app. The catalog
-is just registry refs (`bonito:gnome-asahi`, …), so a new variant needs no
-installer change — but a ref **must** pass the Asahi golden-manifest harness
-before it is offered, and "appears without touching the installer" must never
-be read as "appears without being verified."
+**Architecture** (see [docs/DESIGN.md](docs/DESIGN.md)): we do not ship one
+installer payload for each variant×desktop. We ship **one minimal payload for
+bootstrap**. Its first boot runs [fisherman](https://github.com/tuna-os/fisherman)
+to `bootc install` the image ref that the user picked in the macOS app. The catalog
+holds registry refs (`bonito:gnome-asahi`, …), so a new variant needs no
+installer change. But a ref **must** pass the Asahi golden-manifest harness
+before the app offers it. "Appears with no installer change" does not mean
+"appears with no verification."
 
 The catalog verifies only `bonito` and `grouper`: they passed 36/36 on
 2026-07-30 and 37/37 on 2026-11-20 ([verify-asahi runs](docs/harness-results.json)). On 2026-07-30 the
 other six promoted `*-asahi` tags would have left a Mac unbootable
-([tunaOS#776](https://github.com/tuna-os/tunaOS/issues/776)). The catalog
+([tunaOS#776](https://github.com/tuna-os/tunaOS/issues/776)).
+
+The catalog
 is an explicit allowlist: every `CatalogEntry` carries a `verified` field
 (`false` by default), and the macOS app only offers entries where it is
 `true`. The shipped `catalog.json` includes both `bonito` and `grouper`,
-marked `verified: true`. Adding a new variant requires both the image and a
-passing harness sweep — the field is the gate. That gate is currently
-hand-maintained rather than CI-generated from harness results
-([#70](https://github.com/tuna-os/bootc-installer-asahi/issues/70)); the
+marked `verified: true`. A new variant needs both the image and a
+harness sweep that passes — the field is the gate. A maintainer now sets that gate
+by hand. CI does not generate it from harness results
+([#70](https://github.com/tuna-os/bootc-installer-asahi/issues/70)). The
 harness sweep itself ([#41](https://github.com/tuna-os/bootc-installer-asahi/issues/41))
-that produced the two verified entries above is closed.
+produced the two verified entries above, and a maintainer closed it.
 
 <!-- hive-contribute-plea: donated-compute appeal, keep in sync across repos -->
 ## Contribute compute — no code needed
@@ -59,15 +61,15 @@ Never post account credentials or API keys in issues or pull requests.
       any asahi-capable bootc image as an asahi-installer zip +
       `installer_data.json` (wired with R2 upload step for `download.tunaos.org/asahi`)
 - [x] D0 validated against a real asahi image (`bonito:gnome-asahi`, tunaOS#774)
-- [x] D1 first-boot fisherman agent config (`install-config.json` → unattended `bootc install`)
-- [x] D2 asahi-installer `--json` machine mode (upstreamable)
+- [x] D1 agent config for fisherman at first boot (`install-config.json` → unattended `bootc install`)
+- [x] D2 `--json` machine mode for asahi-installer (upstreamable)
 - [x] D3 macOS app (SwiftUI; implementation is complete, and CI build and tests pass). Alpha still needs end-to-end tests on real Apple Silicon and signed and notarized distribution.
-- [ ] D4 recoveryOS: LUKS fails closed. Remaining work: illustrations, the final QR link target, Wi-Fi SSID prefill, real disk-slider bytes, hardware verification, and a signed and notarized release artifact.
+- [ ] D4 recoveryOS: LUKS fails closed. Remaining work: illustrations, the QR link target, Wi-Fi SSID prefill, real disk-slider bytes, and hardware verification. Also a signed and notarized release artifact.
 
 ## Development & testing
 
-Contributor workflow, code style, branch conventions and the full local test
-matrix live in [CONTRIBUTING.md](CONTRIBUTING.md). The short version:
+The [contributor guide](CONTRIBUTING.md) has the workflow, code style, branch conventions and
+the local test matrix. The short version:
 
 ```sh
 shellcheck -S warning scripts/*.sh components/*/*.sh   # lint, as CI runs it
@@ -80,7 +82,7 @@ cd macos-app/Bootsahi && swift build -v && swift test -v
 
 ### What's tested and what it proves
 
-The project distinguishes two claims that are easy to conflate (see #27):
+The project keeps two claims apart. They are easy to conflate (see #27):
 
 | Claim | Test | What it proves |
 |---|---|---|

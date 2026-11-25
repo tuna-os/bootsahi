@@ -1,8 +1,8 @@
 # Contributing to Bootsahi
 
 This repo (`tuna-os/bootsahi`) is the Apple Silicon (Asahi Linux)
-install path for TunaOS-family bootc images: a macOS app (Bootsahi) plus a
-bootstrap image whose first boot runs
+install path for TunaOS-family bootc images. It has a macOS app (Bootsahi) and a
+bootstrap image. The first boot of that image runs
 [fisherman](https://github.com/tuna-os/fisherman) to `bootc install`
 the image the user picked. See [docs/DESIGN.md](docs/DESIGN.md) for
 the architecture and [README.md](README.md) for current status.
@@ -31,9 +31,9 @@ swift test -v
 ```
 
 CI (`.github/workflows/bootsahi-app-build.yml`) builds and tests this on
-`macos-15` with a pre-6.2 Swift toolchain and a macOS 13 deployment target
-(and on `macos-26` for the Swift 6.2+ Liquid Glass path) on pushes to `main`
-and on PRs touching `macos-app/**`.
+`macos-15` with a pre-6.2 Swift toolchain and a macOS 13 deployment target.
+It also runs on `macos-26` for the Swift 6.2+ Liquid Glass path. It runs on
+pushes to `main` and on PRs that change `macos-app/**`.
 
 ### Shell scripts and the bootstrap/agent harness
 
@@ -88,7 +88,7 @@ Other PR checks:
 
 ## Code style
 
-Shell scripts are linted with `shellcheck -S warning` in CI (see above); there
+CI runs `shellcheck -S warning` on shell scripts (see above). There
 is no repository-wide style tool for the Swift app yet.
 
 ## Branch and PR conventions
