@@ -3,6 +3,7 @@ import SwiftUI
 import AppKit
 import ImageIO
 import UniformTypeIdentifiers
+import CryptoKit
 @testable import Bootsahi
 
 /// Renders every screen of the installer to PNG, plus an animated walkthrough,
@@ -72,14 +73,71 @@ final class ScreenshotCaptureTests: XCTestCase {
 
         var frames: [CGImage] = []
         var findings: [Finding] = []
+        var entries: [[String: Any]] = []
+        var state = "failed"
+        var failure = "capture did not reach completion"
+        // The receipt is written on EVERY exit path, so a failed or partial
+        // run leaves a manifest that says "failed" instead of nothing (or a
+        // stale file) for the verifier to misread. It lists only images that
+        // were actually rendered and audited in this run.
+        defer {
+            let env = ProcessInfo.processInfo.environment
+            let receipt: [String: Any] = [
+                "schema": "bootsahi.capture-receipt/1",
+                "harness_version": 1,
+                "state": state,
+                "failure": state == "complete" ? "" : failure,
+                "scope": "synthetic-appkit-render",
+                "capabilities": [
+                    "render_fixture": "run",
+                    "interaction": "not-run",
+                    "backend_intent": "not-run",
+                    "real_installation": "not-run",
+                ],
+                "identity": [
+                    "source_sha": env["GITHUB_SHA"] ?? "",
+                    "run_id": env["GITHUB_RUN_ID"] ?? "",
+                    "run_attempt": env["GITHUB_RUN_ATTEMPT"] ?? "",
+                    "binary_sha256": Self.sha256(of: URL(fileURLWithPath: CommandLine.arguments[0])) ?? "",
+                    "macos": ProcessInfo.processInfo.operatingSystemVersionString,
+                    "xcode": env["DEVELOPER_DIR"] ?? "",
+                    "renderer": "NSHostingView+cacheDisplay",
+                    "theme": NSApp.effectiveAppearance.name.rawValue,
+                    "scale": NSScreen.main?.backingScaleFactor ?? 1,
+                ] as [String: Any],
+                "fixtures": entries,
+            ]
+            if let data = try? JSONSerialization.data(
+                withJSONObject: receipt, options: [.prettyPrinted, .sortedKeys]) {
+                try? data.write(to: out.appendingPathComponent("capture-receipt.json"))
+            }
+        }
+
         for shot in Self.shots() {
             let image = try XCTUnwrap(
                 render(shot.view),
                 "failed to render \(shot.name) — a nil here means AppKit could not "
                     + "produce a bitmap for the hosting view at \(Self.size)")
-            findings.append(audit(image, name: shot.name))
-            try writePNG(image, to: out.appendingPathComponent("\(shot.name).png"))
+            let finding = Self.audit(image, name: shot.name)
+            findings.append(finding)
+            let png = out.appendingPathComponent("\(shot.name).png")
+            try writePNG(image, to: png)
             frames.append(image)
+            entries.append([
+                "id": shot.name,
+                "file": "\(shot.name).png",
+                "sha256": Self.sha256(of: png) ?? "",
+                "width": image.width,
+                "height": image.height,
+                // What the fixture depicts, not something that happened.
+                "fixture_state": shot.caption,
+                "audit": [
+                    "placeholder": finding.placeholder,
+                    "ink": finding.ink,
+                    "action_bar": finding.actionBar,
+                    "violations": Self.violations(finding),
+                ] as [String: Any],
+            ])
         }
 
         // Report every screen before asserting. Failing fast on the first one
@@ -90,17 +148,12 @@ final class ScreenshotCaptureTests: XCTestCase {
                   + "ink \(pct(f.ink))  actionBar \(pct(f.actionBar))")
         }
         for f in findings {
-            XCTAssertLessThan(
-                f.placeholder, 0.0025,
-                "\(f.name): \(pct(f.placeholder)) SwiftUI \"unsupported view\" "
-                    + "placeholder — a control failed to draw")
-            XCTAssertGreaterThan(
-                f.ink, 0.04,
-                "\(f.name): only \(pct(f.ink)) non-background — the page is blank")
-            XCTAssertGreaterThan(
-                f.actionBar, 0.02,
-                "\(f.name): the action bar is \(pct(f.actionBar)) drawn — the "
-                    + "primary button is missing from the bottom bar")
+            let v = Self.violations(f)
+            XCTAssertTrue(
+                v.isEmpty,
+                "\(f.name): region audit failed \(v) — placeholder \(pct(f.placeholder)), "
+                    + "ink \(pct(f.ink)), action bar \(pct(f.actionBar))")
+            if !v.isEmpty { failure = "\(f.name): \(v)" }
         }
 
         XCTAssertEqual(
@@ -108,7 +161,25 @@ final class ScreenshotCaptureTests: XCTestCase {
             "every screen must render; a missing frame would silently shorten the "
                 + "walkthrough rather than fail the docs build")
 
-        try writeAnimation(frames, to: out.appendingPathComponent("walkthrough.gif"))
+        let gif = out.appendingPathComponent("walkthrough.gif")
+        try writeAnimation(frames, to: gif)
+        entries.append([
+            "id": "walkthrough",
+            "file": "walkthrough.gif",
+            "sha256": Self.sha256(of: gif) ?? "",
+            "width": frames.first?.width ?? 0,
+            "height": frames.first?.height ?? 0,
+            "fixture_state": "\(frames.count) frames of the fixtures above",
+            "audit": ["violations": [String]()] as [String: Any],
+        ])
+        if findings.allSatisfy({ Self.violations($0).isEmpty }) {
+            state = "complete"
+        }
+    }
+
+    private static func sha256(of url: URL) -> String? {
+        guard let data = try? Data(contentsOf: url) else { return nil }
+        return SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
     }
 
     // MARK: - The screens, in the order a user meets them
@@ -254,6 +325,16 @@ final class ScreenshotCaptureTests: XCTestCase {
         return rep.cgImage
     }
 
+    /// The region verdict, shared by the capture test and the pixel-fixture
+    /// controls so both judge a frame by the same thresholds.
+    static func violations(_ f: Finding) -> [String] {
+        var v: [String] = []
+        if f.placeholder >= 0.0025 { v.append("placeholder") }
+        if f.ink <= 0.04 { v.append("blank") }
+        if f.actionBar <= 0.02 { v.append("action-bar") }
+        return v
+    }
+
     struct Finding {
         let name: String
         /// Fraction that is SwiftUI's "unsupported view" marker.
@@ -282,7 +363,7 @@ final class ScreenshotCaptureTests: XCTestCase {
     /// is zero unless a view failed to draw, and the action bar, which is
     /// blank unless the primary button rendered. Those test the actual
     /// regression rather than a correlate of it.
-    private func audit(_ image: CGImage, name: String) -> Finding {
+    static func audit(_ image: CGImage, name: String) -> Finding {
         let w = image.width, h = image.height
         var data = [UInt8](repeating: 0, count: w * h * 4)
         data.withUnsafeMutableBytes { buf in
