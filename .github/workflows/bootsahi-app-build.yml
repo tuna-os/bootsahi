@@ -104,7 +104,7 @@ jobs:
       - uses: actions/upload-artifact@v7.0.2
         with:
           name: swift-coverage
-          path: ${{ runner.temp }}/../**/codecov/*.json
+          path: macos-app/Bootsahi/.build/**/codecov/*.json
           if-no-files-found: warn
 
   # Regenerates docs/screenshots/*.png and the README walkthrough animation from
@@ -141,24 +141,29 @@ jobs:
           xcode=$(printf '%s\n' /Applications/Xcode_16*.app | sort -V | tail -n1)
           [ -d "$xcode" ] || { echo "::error::no Xcode 16.x on this runner"; exit 1; }
           echo "DEVELOPER_DIR=$xcode/Contents/Developer" >> "$GITHUB_ENV"
-      - name: capture every screen
+      # Capture into a fresh, run-specific directory — never the committed
+      # docs/screenshots — so a pre-existing PNG cannot satisfy the check.
+      - name: capture every screen (synthetic AppKit render)
         env:
-          BOOTSAHI_CAPTURE_DIR: ${{ github.workspace }}/docs/screenshots
-        run: swift test --filter ScreenshotCaptureTests
-      # The capture test SKIPS itself when BOOTSAHI_CAPTURE_DIR is unset, and a
-      # skipped XCTest still exits 0. Without this check a broken capture would
-      # publish a green tick and an unchanged, stale set of images — the failure
-      # mode being fixed, reintroduced by the fix.
-      - name: assert the capture actually produced files
+          BOOTSAHI_CAPTURE_DIR: ${{ runner.temp }}/capture-${{ github.run_id }}-${{ github.run_attempt }}
         run: |
-          cd "$GITHUB_WORKSPACE/docs/screenshots"
-          missing=0
-          for f in 01-welcome 02-choose-image 03-settings 04-disk-space \
-                   05-installing 06-recoveryos; do
-            if [ ! -s "$f.png" ]; then echo "::error::missing or empty $f.png"; missing=1; fi
-          done
-          [ -s walkthrough.gif ] || { echo "::error::missing walkthrough.gif"; missing=1; }
-          exit "$missing"
+          rm -rf "$BOOTSAHI_CAPTURE_DIR"
+          swift test --filter ScreenshotCaptureTests
+      # The capture test SKIPS itself when BOOTSAHI_CAPTURE_DIR is unset, and a
+      # skipped XCTest still exits 0. The verifier therefore trusts only the
+      # receipt this run's test wrote (state complete, bound to this commit,
+      # run and attempt, hashes matching the files), never file existence.
+      # It runs even when the test step failed, so a failure is reported with
+      # its first cause rather than as a missing file.
+      - name: verify the capture receipt
+        if: ${{ !cancelled() }}
+        env:
+          CAPTURE_DIR: ${{ runner.temp }}/capture-${{ github.run_id }}-${{ github.run_attempt }}
+        run: |
+          python3 -I "$GITHUB_WORKSPACE/scripts/test-capture-receipt.py"
+          python3 -I "$GITHUB_WORKSPACE/scripts/verify-capture-receipt.py" "$CAPTURE_DIR" \
+            --source-sha "$GITHUB_SHA" --run-id "$GITHUB_RUN_ID" \
+            --run-attempt "$GITHUB_RUN_ATTEMPT"
       # if: always() because the audit step above FAILS when a screen renders
       # wrong — which is exactly when someone needs to look at the picture. The
       # first version skipped the upload on failure, so a capture bug could only
@@ -167,7 +172,13 @@ jobs:
         if: always()
         with:
           name: gui-screenshots
-          path: docs/screenshots/
+          # Bounded: only the receipt and the images/GIF it names. Publishing
+          # these into docs/screenshots stays a separate, manual maintainer step.
+          path: |
+            ${{ runner.temp }}/capture-${{ github.run_id }}-${{ github.run_attempt }}/capture-receipt.json
+            ${{ runner.temp }}/capture-${{ github.run_id }}-${{ github.run_attempt }}/*.png
+            ${{ runner.temp }}/capture-${{ github.run_id }}-${{ github.run_attempt }}/walkthrough.gif
+          if-no-files-found: warn
 
   # The Liquid Glass surface in WizardChrome.swift is behind `#if
   # compiler(>=6.2)` because glassEffect needs the macOS 26 SDK to COMPILE, not
