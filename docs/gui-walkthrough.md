@@ -1,9 +1,12 @@
 # Installing with Bootsahi — a walkthrough
 
-This is what the installer looks like, screen by screen. Every image on this
-page is generated in CI from the real SwiftUI views by
-`ScreenshotCaptureTests` (see `.github/workflows/bootsahi-app-build.yml`), so
-it cannot drift from the app the way hand-taken screenshots do.
+This is what the installer looks like, screen by screen. CI makes every image
+on this page from the real SwiftUI views with `ScreenshotCaptureTests` (see
+`.github/workflows/bootsahi-app-build.yml`). Each run uploads the new images as
+the `gui-screenshots` artifact. CI does not change this page. A maintainer
+copies the images into `docs/screenshots/` by hand, so an image here can be
+older than the app. When an image and the text do not agree, the text is
+correct.
 
 **What these images are and are not.** They are captured from the real SwiftUI
 views hosted in an offscreen `NSWindow`, so the controls you see — buttons,
@@ -34,6 +37,13 @@ The first screen states the shape of the job before anything is touched: macOS
 stays installed, the desktop you choose is downloaded on first start-up rather
 than now, and the final step happens in Apple's recovery environment after a
 shutdown.
+
+The screen also shows the name of your Mac model and a caution for that
+model. Read the caution, then turn on **I have read this and want to
+continue**. **Continue** stays disabled until you turn it on. If your Mac is
+not on the list of supported models, the screen shows the reason, and
+**Continue** stays disabled. The list is
+`macos-app/Bootsahi/Sources/Bootsahi/Resources/supported-models.json`.
 
 ## 2. Choose what to install
 
